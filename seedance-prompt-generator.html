@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seedance 2.0 提示词生成器 v2.4</title>
+<title>Seedance 2.0 提示词生成器 v2.5</title>
 <style>
 :root{
   --primary:#6366F1;--primary-dark:#4F46E5;--primary-light:#818CF8;
@@ -164,7 +164,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
 <div class="header">
   <h1>🎬 Seedance 2.0 提示词生成器</h1>
-  <span class="ver">v2.4</span>
+  <span class="ver">v2.5</span>
   <div class="spacer"></div>
   <span class="badge">🤖 DeepSeek AI 驱动</span>
 </div>
@@ -342,6 +342,16 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
     <!-- 1. 基本设置 -->
     <div class="panel" id="panel-basic">
+      <div class="card">
+        <div class="card-title"><span class="ti">⚡</span>快速预设</div>
+        <div class="card-desc">选择一个预设模板，自动填充视频参数、镜头和风格设置</div>
+        <div class="field">
+          <select id="presetSelect" onchange="applyPreset()" style="flex:1">
+            <option value="">选择预设模板...</option>
+          </select>
+          <button class="btn btn-sm btn-ghost" onclick="applyPreset()">应用</button>
+        </div>
+      </div>
       <div class="card">
         <div class="card-title"><span class="ti">🎞️</span>生成模式</div>
         <div class="radio-grid">
@@ -530,6 +540,36 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
     <!-- 7. 镜头设计 -->
     <div class="panel" id="panel-camera">
       <div class="card">
+        <div class="card-title"><span class="ti">🎭</span>情绪→运镜速查表</div>
+        <div class="card-desc">选择你想要的画面情绪，自动设置景别和运镜组合</div>
+        <div class="feature-grid">
+          <div class="feature-item" onclick="applyEmotionShot('宏大')" style="cursor:pointer">
+            <div class="fi-icon">🏔️</div><div class="fi-title">宏大</div>
+            <div class="fi-desc">大远景 + 升降拉远</div>
+          </div>
+          <div class="feature-item" onclick="applyEmotionShot('紧张')" style="cursor:pointer">
+            <div class="fi-icon">😰</div><div class="fi-title">紧张</div>
+            <div class="fi-desc">近景 + 手持拍摄</div>
+          </div>
+          <div class="feature-item" onclick="applyEmotionShot('聚焦')" style="cursor:pointer">
+            <div class="fi-icon">🔎</div><div class="fi-title">聚焦</div>
+            <div class="fi-desc">特写 + 缓慢推镜</div>
+          </div>
+          <div class="feature-item" onclick="applyEmotionShot('仪式')" style="cursor:pointer">
+            <div class="fi-icon">👑</div><div class="fi-title">仪式</div>
+            <div class="fi-desc">中景 + 环绕镜头</div>
+          </div>
+          <div class="feature-item" onclick="applyEmotionShot('诡异')" style="cursor:pointer">
+            <div class="fi-icon">🌀</div><div class="fi-title">诡异</div>
+            <div class="fi-desc">近景 + 倾斜角度</div>
+          </div>
+          <div class="feature-item" onclick="applyEmotionShot('沉浸')" style="cursor:pointer">
+            <div class="fi-icon">🎮</div><div class="fi-title">沉浸</div>
+            <div class="fi-desc">全景 + 跟随拍摄</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-title"><span class="ti">📐</span>景别 (Shot Scale)</div>
         <div class="radio-grid" id="shotScaleGrid"></div>
       </div>
@@ -684,10 +724,13 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
         <button class="btn btn-primary" onclick="generatePrompt()">🎬 重新生成</button>
         <button class="btn btn-success" onclick="optimizePrompt()">🚀 智能优化</button>
         <button class="btn btn-secondary" onclick="smartFill()">🎯 智能填充</button>
+        <button class="btn btn-pink" onclick="validatePrompt()">🔍 避坑校验</button>
         <button class="btn btn-accent" onclick="copyToClipboard()">📋 复制到剪贴板</button>
         <button class="btn btn-accent" onclick="saveToFile()">💾 保存到文件</button>
         <button class="btn btn-ghost" onclick="showHistory()">📜 历史记录</button>
+        <button class="btn btn-ghost" onclick="clearFormState()">🗑️ 清空表单</button>
       </div>
+      <div id="validationResults" style="display:none;margin-bottom:14px;padding:14px 18px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;line-height:1.8"></div>
       <div class="result-wrap">
         <div class="result-head">
           <span class="title">✨ 生成的提示词</span>
@@ -1126,6 +1169,14 @@ function initUI(){
     let op=document.createElement('option');op.value=k;op.textContent=k;
     ts.appendChild(op);
   });
+  // 快速预设下拉
+  let ps=$('presetSelect');
+  if(ps){
+    Object.keys(presetTemplates).forEach(k=>{
+      let op=document.createElement('option');op.value=k;op.textContent=k;
+      ps.appendChild(op);
+    });
+  }
   // 情绪预设下拉
   let mp=$('moodPreset');
   let mpOpts=['自定义','电影质感','赛博朋克','复古怀旧','日系清新','暗黑恐怖','浪漫唯美','史诗宏大','奢华高级','清新治愈'];
@@ -1144,6 +1195,265 @@ function initUI(){
   // 初始生成
   generatePrompt();
   initAISettings();
+  initFormPersistence();
+  initKeyboardShortcuts();
+}
+
+/* 情绪→运镜速查表应用 */
+const emotionShotMap = {
+  '宏大':{shotScale:'大远景', cameraMove:'升降镜头'},
+  '紧张':{shotScale:'近景', cameraMove:'手持拍摄'},
+  '聚焦':{shotScale:'特写', cameraMove:'缓慢推镜'},
+  '仪式':{shotScale:'中景', cameraMove:'环绕镜头'},
+  '诡异':{shotScale:'近景', cameraMove:'手持拍摄', angle:'倾斜角度'},
+  '沉浸':{shotScale:'全景', cameraMove:'跟随拍摄'}
+};
+function applyEmotionShot(emotion){
+  let cfg = emotionShotMap[emotion];
+  if(!cfg) return;
+  if(cfg.shotScale){ let el=document.querySelector(`input[type="radio"][name="shotScale"][value="${cfg.shotScale}"]`); if(el) el.checked=true; }
+  if(cfg.cameraMove){ let el=$('cameraMove'); if(el) el.value=cfg.cameraMove; }
+  if(cfg.angle){ let el=document.querySelector(`input[type="radio"][name="cameraAngle"][value="${cfg.angle}"]`); if(el) el.checked=true; }
+  generatePrompt();
+  saveFormState();
+  setStatus('已应用「' + emotion + '」运镜组合');
+}
+
+/* 应用快速预设模板 */
+function applyPreset(){
+  let key = $('presetSelect').value;
+  if(!key || !presetTemplates[key]) return;
+  let p = presetTemplates[key];
+  if(p.duration){ let el=$('duration'); if(el) el.value=p.duration; }
+  if(p.ratio){ let el=$('ratio'); if(el) el.value=p.ratio; }
+  if(p.quality){ let el=$('quality'); if(el) el.value=p.quality; }
+  if(p.shotScale){ let el=document.querySelector(`input[type="radio"][name="shotScale"][value="${p.shotScale}"]`); if(el) el.checked=true; }
+  if(p.cameraMove){ let el=$('cameraMove'); if(el) el.value=p.cameraMove; }
+  if(p.lightSource){ let el=document.querySelector(`input[type="radio"][name="lightSource"][value="${p.lightSource}"]`); if(el) el.checked=true; }
+  if(p.medium){ let el=$('medium'); if(el) el.value=p.medium; }
+  if(p.surface){ let el=$('surface'); if(el) el.value=p.surface; }
+  if(p.customStyle){ let el=$('styleCustom'); if(el) el.value=p.customStyle; }
+  onDurationChange();
+  generatePrompt();
+  saveFormState();
+  setStatus('已应用预设: ' + key);
+}
+
+/* ============================================================
+   表单状态持久化 - 刷新页面不丢失填写内容
+   ============================================================ */
+const PERSIST_KEY = 'seedance_form_state';
+let _restoring = false;
+
+function initFormPersistence(){
+  // 监听所有输入元素的变化
+  document.querySelectorAll('input[type="text"],input[type="password"],textarea,select').forEach(el=>{
+    el.addEventListener('change', saveFormState);
+    el.addEventListener('blur', saveFormState);
+  });
+  document.querySelectorAll('input[type="radio"],input[type="checkbox"]').forEach(el=>{
+    el.addEventListener('change', saveFormState);
+  });
+  // 恢复保存的状态
+  restoreFormState();
+}
+
+function saveFormState(){
+  if(_restoring) return;
+  let state = {};
+  // 文本/密码/textarea/select
+  document.querySelectorAll('input[type="text"],input[type="password"],textarea,select').forEach(el=>{
+    if(el.id && !el.id.startsWith('ai') && el.id !== 'apiKey') {
+      state[el.id] = el.value;
+    }
+  });
+  // radio
+  document.querySelectorAll('input[type="radio"]').forEach(el=>{
+    if(el.name) {
+      if(el.checked) state['radio_'+el.name] = el.value;
+    }
+  });
+  // checkbox
+  document.querySelectorAll('input[type="checkbox"]').forEach(el=>{
+    if(el.id) state['check_'+el.id] = el.checked;
+    else if(el.name) state['check_'+el.name+'_'+el.value] = el.checked;
+  });
+  try {
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(state));
+  } catch(e) {}
+}
+
+function restoreFormState(){
+  let raw = localStorage.getItem(PERSIST_KEY);
+  if(!raw) return;
+  try {
+    let state = JSON.parse(raw);
+    _restoring = true;
+    // 文本/textarea/select
+    for(let id in state){
+      if(id.startsWith('radio_')){
+        let name = id.substring(6);
+        let el = document.querySelector(`input[type="radio"][name="${name}"][value="${state[id]}"]`);
+        if(el) el.checked = true;
+      } else if(id.startsWith('check_')){
+        let key = id.substring(6);
+        if(key.includes('_')){
+          // named checkbox with value
+          let parts = key.lastIndexOf('_');
+          let name = key.substring(0, parts);
+          let val = key.substring(parts+1);
+          let el = document.querySelector(`input[type="checkbox"][name="${name}"][value="${val}"]`);
+          if(el) el.checked = state[id];
+        } else {
+          let el = $(key);
+          if(el && el.type==='checkbox') el.checked = state[id];
+        }
+      } else {
+        let el = $(id);
+        if(el && el.tagName) el.value = state[id];
+      }
+    }
+    _restoring = false;
+    generatePrompt();
+    rebuildTimelineSegments();
+  } catch(e) {
+    _restoring = false;
+  }
+}
+
+function clearFormState(){
+  localStorage.removeItem(PERSIST_KEY);
+  document.querySelectorAll('input[type="text"],textarea').forEach(el=>{
+    if(el.id && !el.id.startsWith('ai') && el.id !== 'apiKey' && el.id !== 'resultText') el.value = '';
+  });
+  generatePrompt();
+  setStatus('表单已清空');
+}
+
+/* ============================================================
+   快捷键支持
+   ============================================================ */
+function initKeyboardShortcuts(){
+  document.addEventListener('keydown', e=>{
+    // 不在输入框中时才处理数字键切换标签
+    let inInput = ['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName);
+    
+    // Ctrl+G 重新生成
+    if((e.ctrlKey||e.metaKey) && e.key==='g'){
+      e.preventDefault();
+      generatePrompt();
+      setStatus('已重新生成提示词');
+      return;
+    }
+    // Ctrl+S 保存到文件
+    if((e.ctrlKey||e.metaKey) && e.key==='s'){
+      e.preventDefault();
+      saveToFile();
+      return;
+    }
+    // 数字键 1-9 切换标签页（不在输入框中时）
+    if(!inInput && e.key>='1' && e.key<='9'){
+      let tabs = ['ai','basic','script','timeline','template','subject','style','camera','lighting'];
+      let idx = parseInt(e.key) - 1;
+      if(idx < tabs.length){
+        switchTab(tabs[idx]);
+      }
+      return;
+    }
+    // 0 切换到生成结果
+    if(!inInput && e.key==='0'){
+      switchTab('result');
+      return;
+    }
+  });
+}
+
+/* ============================================================
+   避坑校验 - 检测矛盾指令、模糊词、超长警告
+   ============================================================ */
+function validatePrompt(){
+  let warnings = [];
+  let subject = val('subjectText') || '';
+  let action = val('actionText') || '';
+  let scene = val('sceneText') || '';
+  let cameraMove = val('cameraMove') || '';
+  let shotScale = radioVal('shotScale') || '';
+  let allText = (subject + ' ' + action + ' ' + scene).toLowerCase();
+  
+  // 1. 检测矛盾指令
+  let contradictions = [
+    {a:'固定', b:'环绕', msg:'「固定机位」与「环绕」运镜矛盾'},
+    {a:'固定', b:'推镜', msg:'「固定机位」与「推镜」运镜矛盾'},
+    {a:'固定', b:'横摇', msg:'「固定机位」与「横摇」运镜矛盾'},
+    {a:'缓慢', b:'快速', msg:'「缓慢」与「快速」同时出现，节奏矛盾'},
+    {a:'慢动作', b:'快速', msg:'「慢动作」与「快速」同时出现，节奏矛盾'},
+  ];
+  contradictions.forEach(c=>{
+    if(allText.includes(c.a) && (allText.includes(c.b) || cameraMove.includes(c.b))){
+      warnings.push({type:'error', msg:c.msg});
+    }
+  });
+  
+  // 2. 检测模糊词
+  let vagueWords = ['好看','高级感','漂亮','很美','帅气','大气','有质感','牛逼','好看一点'];
+  vagueWords.forEach(w=>{
+    if(allText.includes(w)){
+      warnings.push({type:'warn', msg:`「${w}」是模糊词，建议用具体描述替代（如"低饱和灰调，暗部细节丰富"代替"高级感"）`});
+    }
+  });
+  
+  // 3. 检测多主体
+  let subjectCount = (subject.match(/[，,、和与及]/g) || []).length;
+  if(subjectCount >= 3){
+    warnings.push({type:'warn', msg:'主体描述含多个对象，Seedance 2.0 单视频建议只保留1个核心主体，多主体易崩坏'});
+  }
+  
+  // 4. 检测提示词超长
+  let resultText = $('resultText') ? $('resultText').value : '';
+  let charCount = resultText.replace(/\n/g,'').replace(/ /g,'').length;
+  if(charCount > 300){
+    warnings.push({type:'warn', msg:`提示词当前${charCount}字，超过300字模型可能无法有效排列优先级，建议精简到100-200字`});
+  }
+  
+  // 5. 检测场景与主体冲突
+  let conflictPairs = [
+    {a:'汉服', b:'赛博朋克', msg:'「汉服」与「赛博朋克」风格强冲突，容易崩坏'},
+    {a:'古风', b:'机甲', msg:'「古风」与「机甲」风格强冲突'},
+    {a:'武侠', b:'宇宙', msg:'「武侠」与「宇宙」场景强冲突'},
+  ];
+  conflictPairs.forEach(c=>{
+    if(allText.includes(c.a) && allText.includes(c.b)){
+      warnings.push({type:'warn', msg:c.msg});
+    }
+  });
+  
+  // 显示结果
+  showValidationResults(warnings);
+}
+
+function showValidationResults(warnings){
+  let html = '';
+  if(warnings.length === 0){
+    html = '<div style="color:var(--success);font-weight:600">✅ 未发现明显问题，提示词结构合理</div>';
+  } else {
+    let errors = warnings.filter(w=>w.type==='error');
+    let warns = warnings.filter(w=>w.type==='warn');
+    if(errors.length) html += '<div style="color:var(--error);font-weight:600;margin-bottom:6px">❌ 矛盾错误 (' + errors.length + ')</div>';
+    errors.forEach(w=>{ html += `<div style="color:var(--error);margin-bottom:4px;padding-left:12px">• ${w.msg}</div>`; });
+    if(warns.length) html += '<div style="color:var(--warning);font-weight:600;margin:8px 0 6px">⚠️ 优化建议 (' + warns.length + ')</div>';
+    warns.forEach(w=>{ html += `<div style="color:var(--warning);margin-bottom:4px;padding-left:12px">• ${w.msg}</div>`; });
+  }
+  if($('validationResults')){
+    $('validationResults').innerHTML = html;
+    $('validationResults').style.display = 'block';
+  } else {
+    alert(html.replace(/<[^>]+>/g, ''));
+  }
+}
+
+function radioVal(name){
+  let el = document.querySelector(`input[type="radio"][name="${name}"]:checked`);
+  return el ? el.value : '';
 }
 
 function switchTab(tabId){
@@ -1398,8 +1708,8 @@ function generatePrompt(){
   }
   if(sceneExpanded) promptParts.push(sceneExpanded);
 
-  // 2.5 时间分段格式 (10秒以上)
-  if(duration==='10秒'||duration==='15秒'){
+  // 2.5 时间分段格式 (10秒以上，仅在未启用时间轴分镜时自动生成)
+  if((duration==='10秒'||duration==='15秒') && !isChecked('timelineEnabled')){
     let timeSegments=generateTimeSegments(duration);
     if(timeSegments) promptParts.push(timeSegments);
   }
@@ -1510,9 +1820,9 @@ function generatePrompt(){
   // 9. 负面提示词
   let negative=val('negativeText');
 
-  // 组合最终提示词
-  let finalPrompt=promptParts.join('. ');
-  if(finalPrompt&&!finalPrompt.endsWith('.')) finalPrompt+='.';
+  // 组合最终提示词（中文句号连接，避免中英标点混排）
+  let finalPrompt=promptParts.join('。');
+  if(finalPrompt&&!finalPrompt.endsWith('。')&&!finalPrompt.endsWith('.')) finalPrompt+='。';
   if(negative) finalPrompt+=`\n\n负面提示词: ${negative}`;
 
   // 参数信息行
@@ -2201,9 +2511,8 @@ function copyAIPrompt(){
 function sendToResult(){
   let text = $('aiPromptOutput').value;
   if(!text){ setStatus('没有可发送的内容'); return; }
-  if($('promptOutput')){
-    $('promptOutput').value = text;
-    updateCount();
+  if($('resultText')){
+    $('resultText').value = text;
   }
   setStatus('✅ 已发送到生成结果');
   switchTab('result');
@@ -2226,6 +2535,23 @@ function initAISettings(){
    更新日志模块
    ============================================================ */
 const changelogData = [
+  {
+    version: "v2.5",
+    date: "2026-07-08",
+    title: "Bug修复 + 新功能大更新",
+    type: "major",
+    items: [
+      "修复AI优化结果无法发送到生成结果页的Bug（元素ID错误）",
+      "修复时间分段与时间轴分镜同时启用时重复输出的问题",
+      "修复提示词拼接中英文标点混排，改用中文句号连接",
+      "新增表单状态持久化，刷新页面不丢失填写内容",
+      "新增快捷键：Ctrl+G重新生成、Ctrl+S保存文件、数字键1-9切换标签页",
+      "新增避坑校验功能，检测矛盾指令/模糊词/多主体/超长警告/风格冲突",
+      "新增情绪→运镜速查表（6种情绪一键设置景别+运镜组合）",
+      "新增7个快速预设模板（电影预告片/产品展示/风景短片等）",
+      "新增清空表单按钮"
+    ]
+  },
   {
     version: "v2.4",
     date: "2026-07-08",
