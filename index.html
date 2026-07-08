@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seedance 2.0 提示词生成器 v2.0</title>
+<style>
+:root{
+  --primary:#6366F1;--primary-dark:#4F46E5;--primary-light:#818CF8;
+  --secondary:#10B981;--accent:#F59E0B;
+  --bg:#F0F2F5;--bg-light:#E8EBF0;--bg-card:#FFFFFF;
+  --text:#1E293B;--text-light:#64748B;--text-dark:#94A3B8;
+  --success:#22C55E;--warning:#F59E0B;--error:#EF4444;
+  --border:#E2E8F0;--hover:#EEF2FF;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 25px rgba(0,0,0,.1),0 4px 10px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Microsoft YaHei',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,textarea,select{font-family:inherit;font-size:14px;outline:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* Header */
+.header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:14px 24px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-lg);flex-shrink:0;z-index:10}
+.header h1{font-size:20px;font-weight:700;letter-spacing:.5px}
+.header .ver{font-size:12px;opacity:.8;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px}
+.header .spacer{flex:1}
+.header .badge{font-size:12px;opacity:.85}
+
+/* Layout */
+.main{flex:1;display:flex;overflow:hidden}
+.nav{width:200px;background:var(--bg-card);border-right:1px solid var(--border);padding:12px 8px;overflow-y:auto;flex-shrink:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-light);font-weight:600;font-size:13px;transition:all .18s;margin-bottom:3px;user-select:none}
+.nav-item:hover{background:var(--hover);color:var(--primary)}
+.nav-item.active{background:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(99,102,241,.35)}
+.nav-item .icon{font-size:17px;width:22px;text-align:center;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:18px 22px}
+
+/* Panels */
+.panel{display:none;animation:fadeIn .25s ease}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-title{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card-title .ti{font-size:16px}
+.card-desc{font-size:12px;color:var(--text-light);margin-bottom:10px;line-height:1.5}
+.hint{font-size:12px;color:var(--text-light);margin-top:8px;line-height:1.6}
+.hint.warn{color:#e67e22}
+
+/* Form controls */
+.form-row{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-start}
+.form-group{display:flex;flex-direction:column;gap:5px;min-width:0}
+.form-group label{font-size:12px;font-weight:600;color:var(--text-light)}
+.field{display:flex;align-items:center;gap:8px}
+label.inline{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:500}
+input[type=text],input[type=number],textarea,select{
+  width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--bg-light);color:var(--text);transition:all .15s;font-size:13px;
+}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+textarea{resize:vertical;line-height:1.6;min-height:60px}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(--primary);cursor:pointer}
+.radio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 14px}
+.check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 14px}
+
+/* Buttons */
+.btn{padding:9px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#16A34A}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{background:#D97706}
+.btn-secondary{background:var(--secondary);color:#fff}
+.btn-secondary:hover{background:#059669}
+.btn-ghost{background:var(--bg-light);color:var(--text)}
+.btn-ghost:hover{background:var(--hover);color:var(--primary)}
+.btn-pink{background:#EC4899;color:#fff}
+.btn-pink:hover{background:#DB2777}
+.btn-blue{background:#3B82F6;color:#fff}
+.btn-blue:hover{background:#2563EB}
+.btn-sm{padding:6px 10px;font-size:12px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* Timeline segments */
+.tl-seg{background:var(--bg-light);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px}
+.tl-seg-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.tl-seg-head .time{font-weight:700;color:var(--primary);font-size:13px;min-width:70px}
+.tl-seg-head select{width:auto;min-width:130px}
+.tl-seg-head textarea{min-height:38px}
+
+/* Template */
+.tmpl-preview{background:var(--bg-light);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-family:Consolas,'Courier New',monospace;font-size:13px;white-space:pre-wrap;min-height:200px;max-height:340px;overflow-y:auto;line-height:1.7;color:var(--text)}
+
+/* Result area */
+.result-wrap{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;margin-bottom:14px}
+.result-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg-light)}
+.result-head .title{font-weight:700;color:var(--primary);font-size:14px;margin-right:auto}
+.result-body{flex:1;overflow:auto;padding:0}
+#resultText{width:100%;min-height:280px;border:none;border-radius:0;background:var(--bg-light);font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.7;padding:14px;color:var(--text);resize:vertical}
+.result-foot{padding:8px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-light);background:var(--bg-light)}
+.count-badge{background:var(--primary);color:#fff;padding:2px 10px;border-radius:10px;font-weight:600}
+
+/* Status bar */
+.statusbar{background:var(--bg-card);border-top:1px solid var(--border);padding:7px 20px;font-size:12px;color:var(--text-light);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.statusbar .dot{width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0}
+
+/* AI 动画 */
+.ai-spinner{width:18px;height:18px;border:2.5px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:aiSpin .7s linear infinite;flex-shrink:0}
+@keyframes aiSpin{to{transform:rotate(360deg)}}
+.ai-error{color:var(--error);background:#FEF2F2;border:1px solid #FECACA !important}
+.ai-success{color:var(--success);background:#F0FDF4;border:1px solid #BBF7D0 !important}
+
+/* Section subsections */
+.subsection{margin-bottom:14px}
+.subsection > label.sub-title{display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:7px}
+.tip-box{background:#FEF3C7;border:1px solid #FDE68A;border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#92400E;line-height:1.7}
+.tip-box ul{margin:0;padding-left:18px}
+
+/* Responsive */
+@media(max-width:780px){
+  .main{flex-direction:column}
+  .nav{width:100%;display:flex;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid var(--border);padding:8px}
+  .nav-item{flex-shrink:0;margin-bottom:0;margin-right:4px;padding:8px 12px;font-size:12px}
+  .content{padding:12px}
+  .radio-grid,.check-grid{grid-template-columns:1fr 1fr}
+  .header h1{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎬 Seedance 2.0 提示词生成器</h1>
+  <span class="ver">v2.0</span>
+  <div class="spacer"></div>
+  <span class="badge">🤖 DeepSeek AI 驱动</span>
+</div>
+
+<div class="main">
+  <div class="nav" id="nav">
+    <div class="nav-item active" data-tab="ai"><span class="icon">🤖</span>AI 生成</div>
+    <div class="nav-item" data-tab="basic"><span class="icon">🎬</span>基本设置</div>
+    <div class="nav-item" data-tab="script"><span class="icon">📝</span>剧本分析</div>
+    <div class="nav-item" data-tab="timeline"><span class="icon">⏱️</span>时间轴分镜</div>
+    <div class="nav-item" data-tab="template"><span class="icon">📋</span>场景模板</div>
+    <div class="nav-item" data-tab="subject"><span class="icon">👤</span>主体内容</div>
+    <div class="nav-item" data-tab="style"><span class="icon">🎨</span>视觉风格</div>
+    <div class="nav-item" data-tab="camera"><span class="icon">📷</span>镜头设计</div>
+    <div class="nav-item" data-tab="lighting"><span class="icon">💡</span>灯光氛围</div>
+    <div class="nav-item" data-tab="audio"><span class="icon">🔊</span>音效设计</div>
+    <div class="nav-item" data-tab="advanced"><span class="icon">⚙️</span>高级设置</div>
+    <div class="nav-item" data-tab="result"><span class="icon">✨</span>生成结果</div>
+  </div>
+
+  <div class="content" id="content">
+
+    <!-- 0. AI 生成 -->
+    <div class="panel active" id="panel-ai">
+      <div class="card">
+        <div class="card-title"><span class="ti">🤖</span>DeepSeek AI 一句话生成提示词</div>
+        <div class="card-desc">输入你的创意想法，AI 会自动分析并填充所有标签页的参数，生成专业的 Seedance 2.0 提示词。</div>
+
+        <div class="subsection">
+          <label class="sub-title">🔑 API Key 设置</label>
+          <div class="field" style="margin-bottom:8px">
+            <input type="password" id="apiKey" placeholder="输入你的 DeepSeek API Key（sk-...）" style="flex:1">
+            <button class="btn btn-sm btn-ghost" onclick="toggleApiKeyVisibility()">👁️ 显示</button>
+            <button class="btn btn-sm btn-secondary" onclick="saveApiKey()">💾 保存</button>
+          </div>
+          <div class="hint" id="apiKeyHint" style="margin-bottom:8px">
+            API Key 保存在浏览器本地（localStorage），不会上传到任何服务器。
+            <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--primary)">点此获取 API Key →</a>
+          </div>
+          <div class="form-row" style="align-items:center;margin-bottom:8px">
+            <div class="form-group" style="flex-direction:row;align-items:center;gap:6px">
+              <label>模型:</label>
+              <select id="aiModel" style="width:auto" onchange="saveModelChoice()">
+                <option value="deepseek-v4-flash">deepseek-v4-flash（快速·便宜）</option>
+                <option value="deepseek-v4-pro" selected>deepseek-v4-pro（强力·推荐）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <label class="sub-title">💡 输入你的创意想法</label>
+          <textarea id="aiInput" rows="4" placeholder="例如：赛博朋克风格的城市夜景，霓虹灯闪烁，一个穿风衣的男人在雨中走过街道" style="font-size:14px;min-height:80px"></textarea>
+        </div>
+
+        <div class="btn-row" style="margin-bottom:14px">
+          <button class="btn btn-primary" onclick="aiGenerate()" id="aiGenerateBtn">🚀 AI 生成提示词</button>
+          <button class="btn btn-ghost" onclick="fillExample()">📝 填充示例</button>
+        </div>
+
+        <div id="aiStatus" style="display:none;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg-light);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div class="ai-spinner" id="aiSpinner"></div>
+            <span id="aiStatusText" style="font-size:13px;color:var(--text-light)">AI 正在思考中...</span>
+          </div>
+        </div>
+
+        <div id="aiResult" style="display:none">
+          <div class="subsection">
+            <label class="sub-title">📋 AI 分析结果</label>
+            <div id="aiAnalysisBox" style="background:var(--bg-light);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-success" onclick="applyAIResult()">✅ 应用到所有标签页</button>
+            <button class="btn btn-ghost" onclick="regenerateAI()">🔄 重新生成</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="ti">📖</span>使用说明</div>
+        <div class="hint" style="line-height:1.8">
+          <strong>三步使用 AI 生成：</strong><br>
+          1. 输入你的 DeepSeek API Key（<a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--primary)">获取地址</a>）<br>
+          2. 用一句话描述你想要的视频内容（越详细 AI 填充越精准）<br>
+          3. 点击「AI 生成提示词」，等待 AI 分析后点击「应用到所有标签页」<br><br>
+          <strong>示例输入：</strong><br>
+          • 赛博朋克城市夜景，一个穿风衣的男人在雨中走过霓虹灯街道，15秒，横屏<br>
+          • 一个可爱的小女孩在花园里追蝴蝶，温馨治愈风格，5秒<br>
+          • 古风武侠打斗场景，两位侠客在枫叶林中对决，水墨风格，10秒<br>
+          • 产品广告：一款银色手表的特写展示，高端商务风格，旋转展示，10秒
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 基本设置 -->
+    <div class="panel" id="panel-basic">
+      <div class="card">
+        <div class="card-title"><span class="ti">🎞️</span>生成模式</div>
+        <div class="radio-grid">
+          <label class="inline"><input type="radio" name="mode" value="T2V" checked onchange="generatePrompt()">T2V (文本生成视频)</label>
+          <label class="inline"><input type="radio" name="mode" value="I2V" onchange="generatePrompt()">I2V (图片生成视频)</label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">⚙️</span>视频参数</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>时长</label>
+            <select id="duration" onchange="onDurationChange();generatePrompt()">
+              <option value="auto">auto</option>
+              <option value="5秒">5秒</option>
+              <option value="10秒">10秒</option>
+              <option value="15秒">15秒</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>比例</label>
+            <select id="ratio" onchange="generatePrompt()">
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+              <option value="1:1">1:1</option>
+              <option value="2.35:1">2.35:1</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>质量档位</label>
+            <select id="quality" onchange="generatePrompt()">
+              <option value="Standard">Standard</option>
+              <option value="High">High</option>
+              <option value="Ultra">Ultra</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🎭</span>情绪基调与节奏</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>情绪基调</label>
+            <select id="mood" onchange="generatePrompt()">
+              <option>自然</option><option>温馨</option><option>紧张</option><option>悬疑</option>
+              <option>欢快</option><option>忧伤</option><option>史诗</option><option>治愈</option><option>惊悚</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>节奏</label>
+            <select id="rhythm" onchange="generatePrompt()">
+              <option>极慢</option><option>缓慢</option><option selected>中速</option><option>快速</option><option>急促</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>制作水平</label>
+            <select id="qualityLevel" onchange="generatePrompt()">
+              <option>专业级</option><option>电影级</option><option>电视级</option><option>广告级</option><option>MV级</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">💡</span>小提示</div>
+        <div class="tip-box"><ul>
+          <li>Standard 档位质量最好，推荐大多数场景使用</li>
+          <li>竖屏 (9:16) 适合抖音、小红书等短视频平台</li>
+          <li>auto 时长会根据提示词复杂度自动调整</li>
+          <li>所有参数调整后，提示词会实时更新</li>
+        </ul></div>
+      </div>
+    </div>
+
+    <!-- 2. 剧本分析 -->
+    <div class="panel" id="panel-script">
+      <div class="card">
+        <div class="card-title"><span class="ti">📖</span>输入剧本</div>
+        <div class="card-desc">输入完整剧本，系统将自动解析场景、角色、动作、对话和氛围，并生成结构化分镜。</div>
+        <textarea id="scriptText" rows="8" placeholder="场景一：雨夜街道&#10;时间：深夜&#10;地点：繁华的都市街道&#10;&#10;林雨薇独自走在雨夜的街道上，她撑着一把黑色的雨伞..."></textarea>
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn btn-pink" onclick="analyzeScript()">🔍 分析剧本</button>
+          <button class="btn btn-secondary" onclick="applyScriptToScene()">✨ 应用到场景</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🎬</span>分析结果</div>
+        <textarea id="storyboardText" rows="14" placeholder="点击「分析剧本」按钮开始分析..." readonly style="background:var(--bg-light)"></textarea>
+      </div>
+    </div>
+
+    <!-- 3. 时间轴分镜 -->
+    <div class="panel" id="panel-timeline">
+      <div class="card">
+        <div class="card-title"><span class="ti">⏱️</span>时间戳分镜</div>
+        <label class="inline" style="font-weight:700;color:var(--primary)">
+          <input type="checkbox" id="timelineEnabled" onchange="onTimelineToggle()"> 启用时间戳分镜（推荐15秒视频使用，实际创作中最常用的高级技巧）
+        </label>
+        <div class="hint">精确控制每个时间段的内容：0-3秒开场 → 4-8秒发展 → 9-12秒高潮 → 13-15秒结尾</div>
+      </div>
+      <div class="card" id="timelineContainer">
+        <div class="card-title"><span class="ti">🎞️</span>分镜段编辑</div>
+        <div id="timelineSegments"></div>
+      </div>
+    </div>
+
+    <!-- 4. 场景模板 -->
+    <div class="panel" id="panel-template">
+      <div class="card">
+        <div class="card-title"><span class="ti">📋</span>选择场景模板</div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;min-width:240px">
+            <label>模板</label>
+            <select id="templateSelect" onchange="onTemplateSelected()"></select>
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="applySceneTemplate()">应用到提示词</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">👁️</span>模板预览</div>
+        <div class="tmpl-preview" id="templatePreview">选择一个模板查看结构...</div>
+      </div>
+    </div>
+
+    <!-- 5. 主体内容 -->
+    <div class="panel" id="panel-subject">
+      <div class="card">
+        <div class="card-title"><span class="ti">👤</span>主体描述 (谁/什么)</div>
+        <textarea id="subjectText" rows="3" placeholder="描述主体，包括外貌、服装、表情、道具等细节" oninput="generatePrompt()">一个年轻女子站在雨中的街道上</textarea>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🏃</span>动作描述 (做什么)</div>
+        <textarea id="actionText" rows="3" placeholder="描述主体的动作和姿态" oninput="generatePrompt()">她缓缓抬起头，闭上眼睛，感受雨水落在脸上</textarea>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🏞️</span>场景/环境 (在哪里)</div>
+        <textarea id="sceneText" rows="3" placeholder="描述场景和环境" oninput="generatePrompt()">夜晚的城市街道，霓虹灯在湿润的路面上映出倒影</textarea>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">💬</span>台词/内心独白 (说什么)</div>
+        <textarea id="dialogueText" rows="3" placeholder="台词或内心独白（将用「」包裹）" oninput="generatePrompt()"></textarea>
+      </div>
+      <div class="hint">💡 提示：描述越具体，生成效果越好。包括外貌、服装、表情、道具等细节。输入的关键词会触发智能扩展库自动补充丰富描述。</div>
+    </div>
+
+    <!-- 6. 视觉风格 -->
+    <div class="panel" id="panel-style">
+      <div class="card">
+        <div class="card-title"><span class="ti">🎨</span>分层风格设置 (Seedance 分层法)</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>媒介 (medium)</label>
+            <select id="medium" onchange="generatePrompt()">
+              <option>真人实拍</option><option>3D动画</option><option>2D动画</option><option>水墨动画</option><option>油画风格</option><option>水彩风格</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>质感 (surface)</label>
+            <select id="surface" onchange="generatePrompt()">
+              <option>自然质感</option><option>胶片质感</option><option>数码质感</option><option>油画质感</option><option>水彩质感</option><option>粗糙质感</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>色调 (palette)</label>
+            <select id="palette" onchange="generatePrompt()">
+              <option>自然色彩</option><option>暖色调</option><option>冷色调</option><option>高饱和</option><option>低饱和</option><option>黑白</option><option>复古色调</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>呈现 (render)</label>
+            <select id="render" onchange="generatePrompt()">
+              <option>电影级</option><option>纪录片</option><option>广告片</option><option>MV风格</option><option>新闻纪实</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">✏️</span>自定义风格补充 (custom)</div>
+        <textarea id="styleCustom" rows="3" placeholder="自定义风格描述，可输入电影/写实/动画/赛博朋克/复古/日系等关键词触发扩展" oninput="generatePrompt()"></textarea>
+        <div class="hint warn">⚠️ 风格安全提示：请使用描述性语言（媒介、质感、光影、色调），避免直接使用工作室、艺术家或IP名称。</div>
+      </div>
+    </div>
+
+    <!-- 7. 镜头设计 -->
+    <div class="panel" id="panel-camera">
+      <div class="card">
+        <div class="card-title"><span class="ti">📐</span>景别 (Shot Scale)</div>
+        <div class="radio-grid" id="shotScaleGrid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🎥</span>镜头运动 (Camera Movement)</div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;min-width:200px">
+            <label>运镜方式</label>
+            <select id="cameraMove" onchange="generatePrompt()"></select>
+          </div>
+          <div class="form-group">
+            <label>运镜速度</label>
+            <select id="moveSpeed" onchange="generatePrompt()">
+              <option>极慢</option><option selected>缓慢</option><option>稳定</option><option>快速</option><option>突然</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🔭</span>镜头角度 (Angle)</div>
+        <div class="radio-grid" id="angleGrid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">📸</span>镜头焦段 (Lens)</div>
+        <select id="lens" onchange="generatePrompt()"></select>
+      </div>
+      <div class="hint">💡 提示：一个片段最好只使用一种主要的镜头运动，避免堆叠多种运动导致混乱。每个镜头选项都会自动匹配扩展库的丰富描述。</div>
+    </div>
+
+    <!-- 8. 灯光氛围 -->
+    <div class="panel" id="panel-lighting">
+      <div class="card">
+        <div class="card-title"><span class="ti">💡</span>主光源类型</div>
+        <div class="radio-grid" id="lightSourceGrid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🌡️</span>色调/色温</div>
+        <select id="colorTemp" onchange="generatePrompt()">
+          <option>自然中性</option><option>温暖钨丝灯</option><option>冷色调</option><option>黄金时刻</option><option>霓虹赛博</option><option>日光灯</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🌫️</span>大气氛围 (与光互动)</div>
+        <div class="radio-grid" id="atmosphereGrid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">⚡</span>快速情绪预设</div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;min-width:200px">
+            <label>情绪预设</label>
+            <select id="moodPreset"></select>
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-accent" onclick="applyMoodPreset()">应用情绪预设</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">✏️</span>自定义灯光补充</div>
+        <textarea id="lightCustom" rows="2" placeholder="自定义灯光描述" oninput="generatePrompt()"></textarea>
+      </div>
+    </div>
+
+    <!-- 9. 音效设计 -->
+    <div class="panel" id="panel-audio">
+      <div class="card">
+        <div class="card-title"><span class="ti">🌿</span>环境音</div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;min-width:200px">
+            <label>环境音类型</label>
+            <select id="ambient" onchange="generatePrompt()">
+              <option>自然环境音</option><option>街道噪音</option><option>自然声</option><option>室内安静</option><option>城市喧嚣</option><option>海浪声</option><option>雨声</option><option>风声</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>音量级别</label>
+            <select id="audioLevel" onchange="generatePrompt()">
+              <option>适中</option><option>突出</option><option>柔和</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🎵</span>具体音效 (逗号分隔)</div>
+        <input type="text" id="sfxText" value="脚步声, 衣服摩擦声" oninput="generatePrompt()">
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🎶</span>背景音乐</div>
+        <select id="music" onchange="generatePrompt()">
+          <option value="无">无</option><option>轻柔</option><option>紧张</option><option>激昂</option><option>悬疑</option><option>欢快</option><option>忧伤</option><option>史诗</option><option>电子</option><option>民谣</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🗣️</span>人声</div>
+        <label class="inline"><input type="checkbox" id="hasVoice" onchange="generatePrompt()">包含人声/对话</label>
+        <input type="text" id="voiceText" placeholder="人声内容描述" oninput="generatePrompt()" style="margin-top:8px">
+      </div>
+      <div class="hint">💡 提示：Seedance 会自动生成匹配画面的音效。如果有特定音效需求，可以在这里详细描述。音效将使用【Sound】专业格式输出。</div>
+    </div>
+
+    <!-- 10. 高级设置 -->
+    <div class="panel" id="panel-advanced">
+      <div class="card">
+        <div class="card-title"><span class="ti">📌</span>约束条件 (必须遵守)</div>
+        <textarea id="constraintText" rows="3" oninput="generatePrompt()">保持面部稳定，动作自然流畅</textarea>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">⭐</span>质量增强选项</div>
+        <div class="check-grid">
+          <label class="inline"><input type="checkbox" id="highDetail" checked onchange="generatePrompt()">高细节 (High detail)</label>
+          <label class="inline"><input type="checkbox" id="cinematic" checked onchange="generatePrompt()">电影级质感 (Cinematic)</label>
+          <label class="inline"><input type="checkbox" id="stable" checked onchange="generatePrompt()">稳定性增强 (Stable motion)</label>
+          <label class="inline"><input type="checkbox" id="highRes" onchange="generatePrompt()">高清分辨率 (High resolution)</label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🚫</span>禁止项声明 (Negative Declaration)</div>
+        <div class="card-desc">在提示词结尾声明不需要的元素，帮助模型规避常见问题。</div>
+        <textarea id="banText" rows="2" oninput="generatePrompt()">任何文字、字幕、LOGO或水印</textarea>
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn btn-ghost btn-sm" onclick="addBanItem('禁止文字/字幕/水印')">禁止文字/字幕/水印</button>
+          <button class="btn btn-ghost btn-sm" onclick="addBanItem('禁止变形/扭曲')">禁止变形/扭曲</button>
+          <button class="btn btn-ghost btn-sm" onclick="addBanItem('禁止多余手指')">禁止多余手指</button>
+          <button class="btn btn-ghost btn-sm" onclick="addBanItem('禁止画面闪烁')">禁止画面闪烁</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">🚫</span>负面提示词 (避免出现)</div>
+        <textarea id="negativeText" rows="3" oninput="generatePrompt()">变形, 扭曲, 模糊, 低质量, 多余的手指, 畸形</textarea>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">✂️</span>自定义开头/结尾</div>
+        <div class="subsection">
+          <label class="sub-title">在提示词最前面添加 (前缀)</label>
+          <input type="text" id="prefixText" oninput="generatePrompt()">
+        </div>
+        <div class="subsection">
+          <label class="sub-title">在提示词最后面添加 (后缀)</label>
+          <input type="text" id="suffixText" oninput="generatePrompt()">
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ti">📏</span>超长视频分段策略 (>15秒)</div>
+        <div class="hint">Seedance 2.0 单次生成上限15秒。超过15秒需分段生成+视频延长拼接。<br>第一段正常生成，后续每段使用「将@视频1延长Xs」格式衔接。<br>每段之间必须有画面衔接点：上一段结尾状态 = 下一段开始状态。</div>
+      </div>
+    </div>
+
+    <!-- 11. 生成结果 -->
+    <div class="panel" id="panel-result">
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-primary" onclick="generatePrompt()">🎬 重新生成</button>
+        <button class="btn btn-success" onclick="optimizePrompt()">🚀 智能优化</button>
+        <button class="btn btn-secondary" onclick="smartFill()">🎯 智能填充</button>
+        <button class="btn btn-accent" onclick="copyToClipboard()">📋 复制到剪贴板</button>
+        <button class="btn btn-accent" onclick="saveToFile()">💾 保存到文件</button>
+        <button class="btn btn-ghost" onclick="showHistory()">📜 历史记录</button>
+      </div>
+      <div class="result-wrap">
+        <div class="result-head">
+          <span class="title">✨ 生成的提示词</span>
+        </div>
+        <div class="result-body">
+          <textarea id="resultText" readonly></textarea>
+        </div>
+        <div class="result-foot">
+          <span>字数: <span class="count-badge" id="countLabel">0</span> 字符</span>
+          <span style="margin-left:auto;color:var(--text-dark)">实时更新 · 修改任意参数自动刷新</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<div class="statusbar">
+  <span class="dot" id="statusDot"></span>
+  <span id="statusText">就绪 | 调整参数后在「生成结果」页查看提示词</span>
+</div>
+
+<script>
+/* ============================================================
+   Seedance 2.0 提示词生成器 - 纯前端实现
+   ============================================================ */
+
+/* ---------- 工具函数 ---------- */
+function randomChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function $(id){ return document.getElementById(id); }
+function val(id){ return $(id).value.trim(); }
+function setVal(id,v){ $(id).value=v; }
+function isChecked(id){ return $(id).checked; }
+
+/* ============================================================
+   1. 扩展库数据（从 Python init_expansion_libraries 完整翻译）
+   ============================================================ */
+
+const subjectExpansions = {
+  "女子":["年轻貌美的亚洲女子，长发披肩，穿着时尚的连衣裙，妆容精致","优雅的女性，身材高挑，气质出众，眼神灵动","温柔的女孩，微笑迷人，穿着简约大方"],
+  "男子":["英俊的亚洲男子，短发利落，穿着得体的西装，自信沉稳","帅气的年轻男子，阳光开朗，穿着休闲装，充满活力","成熟稳重的男士，眼神深邃，穿着商务休闲"],
+  "小孩":["可爱的小女孩，扎着双马尾，穿着粉色连衣裙，天真烂漫","活泼的小男孩，穿着运动装，充满好奇心","乖巧的孩子，眼神纯真，笑容灿烂"],
+  "老人":["慈祥的老人，白发苍苍，穿着舒适的衣服，和蔼可亲","睿智的长者，眼神温和，气质儒雅","精神矍铄的老年人，步履稳健"],
+  "猫":["可爱的橘猫，毛茸茸的，眼神慵懒，姿态优雅","高冷的黑猫，毛发油亮，神秘莫测","活泼的小猫，蹦蹦跳跳，充满好奇心"],
+  "狗":["忠诚的金毛犬，毛发金黄，眼神温顺，笑容灿烂","活泼的柯基犬，短腿萌态，充满活力","聪明的边牧，眼神灵动，动作敏捷"],
+  "机器人":["未来感十足的机器人，金属质感，发光眼睛，科技感","可爱的小型机器人，圆润造型，友好表情","高大的机甲机器人，威武霸气"],
+  "战士":["英勇的战士，身披铠甲，手持武器，英姿飒爽","神秘的忍者，黑衣蒙面，身手敏捷","未来战士，高科技装备，战斗姿态"],
+  "舞者":["优雅的芭蕾舞演员，身姿曼妙，轻盈飘逸","热情的拉丁舞舞者，充满激情，动感十足","现代舞者，肢体表现力强，情感丰富"],
+  "厨师":["专业的厨师，戴着厨师帽，穿着白色制服，专注烹饪","街头小吃摊主，热情洋溢，手艺精湛"],
+  "医生":["专业的医生，穿着白大褂，戴着口罩，神情专注","救死扶伤的医护人员，温柔细心"],
+  "宇航员":["穿着宇航服的宇航员，在太空中漂浮，探索未知","未来太空探索者，先进装备，充满冒险精神"],
+  "精灵":["美丽的森林精灵，透明翅膀，绿色服饰，神秘优雅","梦幻的精灵，闪闪发光，仙气飘飘"],
+  "武士":["日本武士，身穿和服，手持武士刀，气质威严","战国武士，铠甲鲜明，英勇无畏"],
+  "天使":["纯洁的天使，白色翅膀，光环环绕，神圣庄严","温柔的天使，笑容温暖，充满慈悲"],
+  "恶魔":["邪恶的恶魔，红色皮肤，角和尾巴，气势汹汹","魅惑的恶魔，黑色翅膀，神秘诱人"],
+  "美人鱼":["美丽的美人鱼，鱼尾闪耀，长发飘逸，水中游动","神秘的海洋生物，鳞片发光"],
+  "龙":["威严的东方龙，金色鳞片，翱翔天际","凶猛的西方龙，喷火咆哮，霸气十足"],
+  "独角兽":["梦幻的独角兽，白色毛发，独角闪耀，圣洁美丽"],
+  "魔法少女":["可爱的魔法少女，华丽服饰，变身姿态，充满希望"],
+  "超级英雄":["英勇的超级英雄，酷炫战衣，标志性姿势","正义的化身，披风飞扬，充满力量"]
+};
+
+const actionExpansions = {
+  "看":["目光凝视，眼神专注而深邃，瞳孔微微收缩，眼睑缓缓眨动，视线穿透时空","凝视远方，眼神中透出思索与期待，睫毛轻轻颤动，目光穿越距离","注视前方，眼神坚定而温柔，眼波流转间传递着情感，视线紧紧锁定目标"],
+  "走":["脚步轻盈，步伐优雅，脚尖先落地，脚跟轻轻抬起，身姿挺拔而舒展","缓步前行，步伐稳健，鞋底与地面摩擦发出轻微声响，身体随步伐自然摆动","漫步向前，步态从容，双臂自然摆动，重心平稳转移，每一步都充满韵律"],
+  "跑":["脚步飞快，身体前倾，双臂用力摆动，呼吸急促而有节奏，风从耳边呼啸而过","飞速奔跑，步伐紧凑，脚掌快速交替，心跳加速，身体充满力量与动感","冲刺向前，速度惊人，肌肉紧绷，汗水滴落，展现极致的运动美感"],
+  "跳":["轻盈跃起，身体在空中舒展，双臂向上伸展，双腿弯曲后优雅落地","高高跳起，身姿矫健，膝盖弯曲蓄力，腾空时身体如箭般射向空中","弹跳而起，动作敏捷，脚底发力蹬地，身体轻盈离地，展现爆发力与美感"],
+  "坐":["缓缓坐下，身体重心逐渐下沉，臀部轻轻接触座椅，背部挺直，姿态优雅","优雅落座，动作舒缓，双腿交叉或并拢，双手自然放置，尽显从容气质","安坐其中，坐姿端正，身体放松而不慵懒，展现良好的仪态与修养"],
+  "站":["静静站立，身姿挺拔，双腿微微分开与肩同宽，双臂自然垂落，目光平视前方","笔直站立，姿态端庄，脊柱挺直，双肩放松下沉，展现自信与力量","屹立不动，站姿稳健，身体重心均匀分布，神情自若，气场沉稳"],
+  "躺":["轻轻躺下，身体缓缓舒展，四肢放松，呼吸变得绵长而舒缓","安然躺卧，姿态慵懒，身体与地面完美贴合，肌肉完全放松，享受片刻宁静","平躺下来，身体舒展，双臂自然放在身侧或交叉胸前，神情安详"],
+  "举手":["手臂缓缓抬起，手肘微屈，手掌张开或握拳，动作优雅而有力","抬手示意，动作简洁，手臂从身侧抬起至胸前或头顶，掌心向外或向内","高举手臂，姿态豪迈，手臂笔直向上，展现力量与决心"],
+  "挥手":["挥手致意，手掌张开，手臂来回摆动，动作亲切友好","轻轻挥手，手掌自然摆动，手臂弯曲，传递告别或问候之意","挥动双手，动作热情，手臂大幅度摆动，表达强烈的情感"],
+  "微笑":["嘴角微微上扬，露出洁白的牙齿，眼神温柔，笑容灿烂而温暖","淡淡一笑，嘴角轻扬，眼神中透出笑意，笑容含蓄而迷人","开怀大笑，笑容爽朗，眼睛弯成月牙，整个面部洋溢着快乐"],
+  "哭":["眼眶泛红，泪水在眼眶中打转，然后缓缓滑落，神情哀伤","低声啜泣，肩膀微微颤抖，泪水流淌，神情悲痛而无助","嚎啕大哭，情绪激动，泪水喷涌而出，释放内心的痛苦"],
+  "说话":["轻声细语，声音温柔婉转，语速适中，语调抑扬顿挫","慷慨陈词，声音洪亮有力，语速稍快，充满激情与感染力","娓娓道来，声音平和沉稳，语速缓慢，讲述引人入胜"],
+  "思考":["眉头微蹙，眼神专注，手指轻轻敲击下巴，陷入沉思","若有所思，眼神迷离，手指托着腮帮子，思绪飘向远方","凝神思考，目光深邃，嘴唇微微抿起，大脑飞速运转"],
+  "转头":["头部缓缓转动，目光随之转移，动作优雅流畅","猛然回头，动作迅速，眼神中带着惊讶或警觉","轻轻转头，动作轻柔，颈部线条优美，目光温柔地转向侧面"],
+  "抬头":["缓缓抬头，目光从下方移向高处，神情坚定或向往","猛地抬头，动作有力，眼神中透出不服输的意志","轻轻抬头，动作舒缓，目光望向天空，充满憧憬"],
+  "低头":["微微低头，目光向下，神情羞涩或沉思","深深低头，动作缓慢，表达歉意或悲伤","轻轻低头，姿态优雅，视线落在脚下或手中"],
+  "转身":["优雅转身，身体如陀螺般旋转，裙摆或衣角随风飘动","快速转身，动作敏捷，眼神锐利，反应迅速","缓缓转身，动作从容，身体转动180度，目光锁定新方向"],
+  "呼吸":["深呼吸，胸腔缓缓起伏，气流从鼻腔进入，神情放松","急促呼吸，胸部剧烈起伏，鼻翼煽动，心跳加速","绵长呼吸，气息均匀，一呼一吸间节奏平稳，神情安详"],
+  "触摸":["指尖轻轻触碰，动作轻柔，感受物体的温度与纹理","温柔抚摸，手掌缓缓划过，传递温暖与关怀","用力紧握，手指弯曲，力度适中，表达坚定或紧张"],
+  "拿起":["伸手拿起，手指弯曲握住物体，手臂缓缓抬起，动作流畅","轻轻拿起，动作小心翼翼，生怕损坏物品，展现细致与谨慎","一把抓起，动作干脆利落，手臂发力，展现力量与果断"],
+  "放下":["轻轻放下，手臂缓缓下沉，物体平稳落地，动作轻柔","重重放下，手臂快速下沉，物体与地面碰撞发出声响，表达不满","小心放下，动作缓慢，确保物体安全放置，展现细致"],
+  "打开":["轻轻打开，动作舒缓，物体逐渐展开，展现内部世界","猛然推开，动作有力，物体快速打开，表达急切或愤怒","缓缓开启，动作优雅，物体慢慢显露，充满仪式感"],
+  "关闭":["轻轻合上，动作轻柔，物体缓缓闭合，恢复原状","重重关上，动作有力，物体快速闭合，发出清脆声响","缓缓关闭，动作优雅，物体慢慢合拢，结束一段故事"],
+  "喝水":["端起水杯，嘴唇轻触杯口，缓缓啜饮，神情满足","大口喝水，动作豪爽，水流快速入口，解渴畅快","小口抿饮，动作优雅，品味每一口，享受片刻清凉"],
+  "吃东西":["细细咀嚼，动作缓慢，品味食物的滋味，神情陶醉","大口吞咽，动作快速，狼吞虎咽，展现饥饿与满足","优雅用餐，动作从容，刀叉配合，尽显礼仪与修养"],
+  "睡觉":["安然入睡，呼吸均匀，神情安详，身体完全放松","辗转反侧，难以入眠，身体不断翻动，神情焦虑","沉睡不醒，呼吸绵长，面容恬静，沉浸在梦境中"],
+  "醒来":["缓缓睁开眼睛，眼神迷茫，逐渐适应光线，神情清醒","猛然惊醒，动作急促，眼神惊恐，心跳加速","自然苏醒，动作舒缓，伸个懒腰，精神焕发"],
+  "跳舞":["翩翩起舞，身姿优美，舞步轻盈，手臂优雅摆动","热情舞动，动作奔放，身体充满节奏感，展现活力","优雅起舞，动作从容，舞步流畅，如诗如画"],
+  "唱歌":["引吭高歌，声音洪亮，音调优美，充满激情","轻声吟唱，声音婉转，曲调悠扬，温柔动人","深情歌唱，声音真挚，情感饱满，打动人心"],
+  "写字":["挥毫泼墨，笔尖流畅，字迹工整有力，神情专注","提笔书写，动作缓慢，字迹工整，展现认真态度","疾笔书写，动作快速，字迹龙飞凤舞，充满个性"],
+  "画画":["细心描绘，笔触细腻，色彩搭配协调，神情专注","挥洒自如，画笔飞舞，色彩浓烈，展现激情","精心创作，构图巧妙，笔触细腻，展现艺术才华"],
+  "弹奏":["指尖轻触琴键，动作优雅，旋律悠扬，神情陶醉","激情弹奏，动作有力，节奏明快，展现技巧与热情","缓缓弹奏，动作舒缓，旋律优美，引人入胜"],
+  "拥抱":["紧紧拥抱，双臂用力环绕，传递温暖与爱意","轻轻拥抱，动作温柔，双臂轻轻环绕，表达关怀","深情拥抱，动作缓慢，紧紧相拥，诉说无尽思念"],
+  "亲吻":["轻轻一吻，动作温柔，嘴唇轻触，传递爱意","深情热吻，动作激烈，情感炽热，表达浓烈爱意","轻轻吻别，动作短暂，表达不舍与眷恋"],
+  "握手":["紧紧握手，力度适中，眼神交流，表达友好与信任","轻轻握手，动作轻柔，表达礼貌与尊重","热情握手，动作有力，表达欢迎与喜悦"],
+  "挥手告别":["挥手告别，动作温柔，目光中带着不舍，渐行渐远","用力挥手，动作夸张，表达强烈的留恋，直到身影消失","轻轻挥手，动作简洁，无声地说再见"],
+  "点头":["轻轻点头，动作短促，表达同意或理解","频频点头，动作连续，表达强烈赞同","缓缓点头，动作缓慢，表达深思熟虑后的认可"],
+  "摇头":["轻轻摇头，动作短促，表达否定或不同意","连连摇头，动作快速，表达强烈反对","缓缓摇头，动作缓慢，表达无奈或惋惜"],
+  "鞠躬":["深深鞠躬，动作缓慢，表达敬意或歉意","微微鞠躬，动作简短，表达礼貌与尊重","九十度鞠躬，动作标准，表达最高敬意"],
+  "敬礼":["庄严敬礼，动作标准，神情严肃，表达敬意","轻轻敬礼，动作简洁，表达问候与尊重","行军礼，动作有力，展现军人风采"],
+  "走路":["步伐稳健，身姿挺拔，双臂自然摆动，目光坚定","脚步轻盈，身姿优美，如同在跳舞，展现优雅","大步流星，步伐快速，展现自信与决断"],
+  "跑步":["脚步飞快，身体前倾，呼吸急促，展现速度与力量","慢跑锻炼，步伐均匀，呼吸平稳，展现健康活力","冲刺快跑，速度惊人，展现爆发力"],
+  "跳跃":["高高跃起，身姿矫健，展现弹跳力与美感","轻轻跳跃，动作轻盈，如同小鸟般灵动","原地跳跃，动作有力，展现活力与激情"],
+  "蹲下":["缓缓蹲下，身体重心下沉，膝盖弯曲，动作平稳","迅速蹲下，动作敏捷，躲避或观察","轻轻蹲下，动作温柔，与孩子交流或系鞋带"],
+  "站立":["笔直站立，身姿挺拔，展现自信与力量","静静站立，神情安详，如同雕塑般坚定","优雅站立，姿态端庄，尽显气质"],
+  "行走":["漫步前行，步伐从容，享受沿途风景","疾步快走，步伐快速，赶时间或有急事","悠闲行走，步伐缓慢，放松心情"]
+};
+
+const sceneExpansions = {
+  "街道":["繁华的城市街道，高楼林立，车水马龙，霓虹灯闪烁，行人匆匆","宁静的小巷，青石板路，两旁是古朴的店铺，阳光透过树叶洒落斑驳光影","夜晚的街道，路灯昏黄，细雨绵绵，路面倒映着霓虹灯光，行人稀少"],
+  "森林":["茂密的森林，参天大树遮天蔽日，阳光透过叶隙洒下金色光斑，空气清新湿润","幽静的竹林，翠绿的竹叶沙沙作响，小径蜿蜒，雾气缭绕，宁静祥和","神秘的原始森林，古树参天，藤蔓缠绕，光影斑驳，充满未知与神秘"],
+  "海边":["金色的沙滩，海浪轻轻拍打着海岸，海风拂面，阳光明媚，海鸥翱翔","静谧的海边，暮色降临，海浪汹涌，礁石林立，天空被染成橙红色","清晨的海边，薄雾弥漫，海浪轻柔，沙滩上留下串串脚印，宁静而美好"],
+  "城市":["繁华的都市，高楼大厦鳞次栉比，车水马龙，人潮涌动，霓虹灯闪烁","现代都市夜景，万家灯火，流光溢彩，摩天大楼直插云霄，繁华喧嚣","宁静的城市角落，公园绿地，喷泉雕塑，行人悠闲散步，充满生活气息"],
+  "乡村":["宁静的乡村，稻田金黄，炊烟袅袅，白墙黛瓦，鸡犬相闻","美丽的田园风光，绿树成荫，花香四溢，小溪潺潺，牛羊悠闲","清晨的乡村，薄雾笼罩，露珠晶莹，鸟语花香，充满生机与希望"],
+  "山":["巍峨的山峰，云雾缭绕，山顶积雪皑皑，气势磅礴，令人敬畏","连绵的群山，层峦叠嶂，绿意盎然，山风习习，心旷神怡","险峻的山崖，怪石嶙峋，松涛阵阵，云雾缭绕，充满挑战与壮美"],
+  "沙漠":["广袤的沙漠，黄沙漫天，沙丘连绵起伏，烈日炎炎，一望无际","沙漠绿洲，清澈的泉水，绿树成荫，与周围的黄沙形成鲜明对比","沙漠黄昏，落日余晖，沙丘被染成金黄色，驼队缓缓前行，神秘而壮丽"],
+  "草原":["辽阔的草原，绿草如茵，牛羊成群，蓝天白云，雄鹰翱翔","美丽的草原风光，野花遍地，微风拂面，远处是连绵的山脉","草原之夜，繁星点点，篝火熊熊，马头琴声悠扬，充满浪漫气息"],
+  "湖泊":["平静的湖面，波光粼粼，倒映着蓝天白云，湖边绿树成荫","清澈的湖泊，湖水碧绿，周围群山环抱，云雾缭绕，宛如仙境","宁静的湖畔，微风拂过，荷叶摇曳，荷花盛开，清香四溢"],
+  "河流":["奔腾的河流，波涛汹涌，水花四溅，两岸青山相对出","蜿蜒的小河，水流潺潺，两岸绿树成荫，野花盛开，充满生机","宁静的溪流，清澈见底，鹅卵石遍布，鱼儿畅游，鸟语花香"],
+  "瀑布":["壮观的瀑布，飞流直下，水花四溅，彩虹横跨，气势磅礴","幽静的瀑布，水流轻柔，如烟如雾，周围绿树成荫，空气清新","多层瀑布，层层叠叠，水声轰鸣，雾气弥漫，宛如仙境"],
+  "雪山":["皑皑雪山，银装素裹，云雾缭绕，阳光照耀下闪闪发光","壮丽的雪山风光，雪峰林立，冰川蜿蜒，蓝天白云，美不胜收","雪山之巅，寒风凛冽，白雪皑皑，远处是无尽的云海"],
+  "花园":["美丽的花园，百花盛开，蝴蝶飞舞，蜜蜂采蜜，花香四溢","精致的花园，喷泉雕塑，修剪整齐的灌木，五彩缤纷的花朵","日式庭院，枯山水，青苔石灯笼，宁静雅致，充满禅意"],
+  "公园":["热闹的公园，绿树成荫，草坪翠绿，孩子们嬉戏玩耍，老人们悠闲散步","宁静的公园一角，凉亭长椅，湖光山色，适合冥想与放松","现代化公园，健身设施，音乐喷泉，雕塑艺术，充满活力"],
+  "校园":["青春洋溢的校园，绿树成荫，教学楼错落有致，学生们朝气蓬勃","宁静的校园清晨，薄雾弥漫，书香四溢，莘莘学子刻苦读书","美丽的校园黄昏，夕阳余晖，篮球场上青春飞扬，充满活力"],
+  "办公室":["现代简约的办公室，整洁有序，电脑屏幕闪烁，职员们忙碌工作","开放式办公区，充满活力，团队协作，创意氛围浓厚","安静的独立办公室，落地窗，城市美景，适合专注工作"],
+  "咖啡馆":["温馨的咖啡馆，香气扑鼻，文艺氛围，柔和灯光，舒适座椅","复古风格的咖啡馆，怀旧情怀，木质桌椅，老唱片，悠闲时光","现代简约咖啡馆，极简设计，咖啡香气，适合阅读与工作"],
+  "酒吧":["热闹的酒吧，灯光闪烁，音乐动感，人们举杯畅饮，欢声笑语","安静的爵士酒吧，氛围优雅，萨克斯悠扬，适合放松与交谈","复古酒吧，昏暗灯光，威士忌醇香，充满怀旧与故事"],
+  "电影院":["豪华的电影院，舒适的座椅，震撼音效，巨幕投影，沉浸体验","复古电影院，胶片情怀，红色座椅，怀旧海报，经典电影","独立影院，艺术氛围，小众电影，文艺青年聚集地"],
+  "舞台":["华丽的舞台，灯光璀璨，表演精彩，观众掌声雷动","简约的舞台，聚焦表演者，灯光柔和，音乐悠扬，艺术呈现","露天舞台，星空为幕，微风拂面，自然与艺术完美融合"],
+  "战场":["激烈的战场，硝烟弥漫，战士英勇，炮火轰鸣，生死较量","历史战场，遗迹斑驳，草木丛生，诉说着过去的故事","虚拟战场，科技感十足，激光闪烁，未来战争的预演"],
+  "实验室":["高科技实验室，仪器精密，科学家忙碌，数据闪烁，探索未知","神秘的地下实验室，充满未知，试管烧杯，化学反应，科学探索","现代化实验室，洁净明亮，自动化设备，精准实验，创新研究"],
+  "图书馆":["安静的图书馆，书架林立，知识的海洋，读者们专注阅读","古老的图书馆，书籍泛黄，充满智慧，木质书架，历史厚重","现代图书馆，数字资源，舒适阅读区，知识共享，文化传承"],
+  "博物馆":["宏伟的博物馆，展品丰富，历史厚重，游客络绎不绝","艺术博物馆，名画珍品，艺术殿堂，审美熏陶，文化传承","科技博物馆，互动体验，创新展示，寓教于乐，知识普及"],
+  "火车站":["繁忙的火车站，人来人往，离别重逢，列车穿梭，充满故事","复古火车站，蒸汽机车，怀旧情怀，木质站台，时光倒流","现代化高铁站，高速列车，便捷出行，科技感十足"],
+  "机场":["现代机场，飞机起降，连接世界，旅客匆匆，奔向远方","繁忙的航站楼，安检登机，商店餐厅，人来人往，国际交流","机场观景台，飞机滑行，蓝天白云，梦想起飞"],
+  "餐厅":["豪华的餐厅，烛光晚餐，浪漫氛围，精致美食，优雅服务","热闹的大排档，烟火气浓，美味小吃，欢声笑语，生活气息","特色餐厅，异国风情，独特装饰，美食体验，文化交流"],
+  "厨房":["温馨的厨房，饭菜飘香，充满生活气息，家人团聚","专业的后厨，厨师忙碌，井然有序，锅碗瓢盆，美食诞生","现代化厨房，智能设备，整洁卫生，烹饪艺术"],
+  "卧室":["温馨的卧室，阳光洒落，舒适放松，甜蜜梦乡","简约风格的卧室，整洁明亮，舒适大床，休息空间","豪华卧室，宽敞舒适，落地窗，城市夜景，奢华体验"],
+  "浴室":["豪华的浴室，浴缸宽敞，放松身心，水疗体验","简约浴室，干净整洁，清新舒适，洗去疲惫"],
+  "屋顶":["城市屋顶，俯瞰美景，高楼林立，车水马龙，城市脉搏","宁静的屋顶花园，绿植环绕，休闲座椅，城市绿洲","屋顶露台，夕阳余晖，城市天际线，浪漫约会"],
+  "阳台":["温馨的阳台，绿植盆栽，休闲桌椅，阳光明媚，生活小确幸","高层阳台，城市景观，远眺美景，心旷神怡","封闭阳台，温暖舒适，看书品茶，悠闲时光"],
+  "天台":["空旷的天台，蓝天白云，城市全景，自由呼吸","天台花园，花草树木，休闲空间，城市中的世外桃源","天台派对，灯光音乐，欢声笑语，青春狂欢"],
+  "走廊":["长长的走廊，墙壁挂着艺术画，灯光柔和，静谧优雅","校园走廊，学生们匆匆而过，书声琅琅，青春气息","酒店走廊，地毯柔软，门牌号整齐，安静舒适"],
+  "楼梯":["旋转楼梯，优雅曲线，木质扶手，光影斑驳","石质楼梯，古老厚重，青苔斑驳，历史沉淀","现代楼梯，简约设计，金属质感，线条流畅"],
+  "电梯":["现代电梯，镜面装饰，数字显示，快速升降","复古电梯，木质内饰，铜制按钮，时光流逝"],
+  "房间":["宽敞的房间，落地窗，阳光充足，家具精美，舒适生活","狭小的房间，温馨舒适，物品摆放有序，生活气息浓厚","艺术工作室，画笔颜料，创作空间，充满灵感"],
+  "大厅":["宏伟的大厅，挑高天花板，水晶吊灯，金碧辉煌","酒店大厅，大理石地面，接待台，优雅服务","公共大厅，人来人往，信息公告，交流空间"],
+  "地下室":["阴暗的地下室，潮湿阴冷，神秘莫测，充满未知","温馨的地下室，改造为工作室，创意空间，独特氛围","储物地下室，杂物堆积，时光记忆，尘封往事"],
+  "阁楼":["温馨的阁楼，斜屋顶，天窗，阳光洒落，文艺气息","神秘的阁楼，堆满旧物，时光倒流，故事等待发现","改造的阁楼，舒适卧室，城市景观，独特居住体验"]
+};
+
+const sceneInteractionExpansions = {
+  "街道":["站在街道中央，四周是繁华的都市景象，人流从身边匆匆而过","靠在街边的路灯旁，目光望向远方，身影被路灯拉得很长","漫步在人行道上，脚步轻盈，欣赏着两旁的店铺和风景","坐在街边的长椅上，看着人来人往，感受城市的脉搏","站在十字路口，等待绿灯，四周是车水马龙的喧嚣"],
+  "森林":["站在森林深处，四周是参天大树，阳光透过叶隙洒下斑驳光影","坐在树下的石头上，聆听鸟儿的歌唱，感受大自然的宁静","漫步在林间小径，脚下是松软的落叶，空气清新湿润","靠在树干上，闭上眼睛，呼吸着森林的气息","站在森林边缘，望向幽深的树林，充满探索的欲望"],
+  "海边":["站在沙滩上，海浪轻轻拍打着双脚，海风拂面，心旷神怡","坐在海边的礁石上，望着一望无际的大海，思绪万千","漫步在海岸线，留下串串脚印，海浪不断冲刷","靠在海边的护栏上，听着海浪的声音，感受海风的轻抚","站在海浪中，任由海水打湿衣裳，感受大海的力量"],
+  "城市":["站在高楼的天台上，俯瞰整个城市，感受都市的繁华与喧嚣","漫步在城市的街头，融入人潮，感受城市的脉搏","坐在公园的长椅上，看着周围的高楼大厦，宁静与喧嚣并存","站在地铁站台，等待列车，感受城市的快节奏","靠在咖啡厅的窗边，看着窗外的城市景象，享受片刻宁静"],
+  "乡村":["站在田野中，四周是金黄的稻田，感受乡村的宁静与美好","坐在农家小院的摇椅上，听着鸡鸣狗吠，感受田园生活","漫步在乡间小路，两旁是绿树成荫，花香四溢","靠在村口的老槐树下，与乡亲们聊天，感受淳朴的乡情","站在山坡上，俯瞰整个村庄，炊烟袅袅，田园如画"],
+  "山":["站在山顶，俯瞰群山，感受一览众山小的豪迈","坐在山间的凉亭里，喝着茶，欣赏山景，心旷神怡","攀登在山间小径，感受登山的艰辛与快乐","靠在山石上，休息片刻，感受山风的凉爽","站在山脚下，仰望巍峨的山峰，心生敬畏"],
+  "沙漠":["站在沙丘上，望向一望无际的沙漠，感受大自然的浩瀚","坐在沙丘上，看着落日余晖，沙漠被染成金黄色","行走在沙漠中，感受沙粒的温热，体验沙漠的严酷与壮美","靠在仙人掌旁，休息片刻，感受沙漠中的生命奇迹","站在绿洲边，感受沙漠中的一抹生机"],
+  "草原":["站在草原中央，四周是绿草如茵，感受草原的辽阔与自由","坐在草地上，看着牛羊成群，感受田园牧歌的美好","漫步在草原上，感受微风拂面，花香四溢","靠在蒙古包旁，喝着奶茶，感受草原民族的热情","站在草原的高处，望向远方的地平线，心胸开阔"],
+  "花园":["站在花园中央，四周是百花盛开，感受花香四溢的美好","坐在花园的长椅上，看着蝴蝶飞舞，享受宁静时光","漫步在花丛中，感受花香扑鼻，色彩斑斓","靠在花园的栅栏旁，欣赏着精心打理的花草","站在花园的喷泉边，感受水花飞溅的清凉"],
+  "室内":["站在房间中央，环顾四周，感受室内的温馨与舒适","坐在沙发上，放松身心，享受家的温暖","靠在窗边，看着窗外的景色，思绪飘远","站在镜子前，整理仪容，展现最好的自己","坐在书桌前，专注工作或学习，沉浸其中"],
+  "楼梯":["站在楼梯顶端，俯瞰楼下，感受空间的层次感","缓步走下楼梯，感受脚步与楼梯的节奏","坐在楼梯上，休息片刻，感受建筑的美感","靠在楼梯扶手上，等待或思考","站在楼梯转角，感受空间的转换"],
+  "阳台":["站在阳台栏杆旁，远眺风景，感受微风拂面","坐在阳台的藤椅上，喝着茶，享受悠闲时光","靠在阳台的窗边，看着窗外的城市或自然","站在阳台的角落，感受阳光的温暖","在阳台上种植花草，感受生命的成长"],
+  "屋顶":["站在屋顶边缘，俯瞰城市，感受都市的繁华","坐在屋顶的露台上，看着星空，感受宇宙的浩瀚","靠在屋顶的栏杆上，感受夜风的凉爽","站在屋顶的中央，感受开阔的视野","在屋顶上散步，感受城市夜晚的宁静"],
+  "海边礁石":["站在礁石上，感受海浪的冲击，体验自然的力量","坐在礁石上，看着潮起潮落，感受时间的流逝","靠在礁石旁，听着海浪的声音，感受大海的韵律"],
+  "树下":["站在树下，感受树荫的清凉，听着树叶的沙沙声","坐在树下的草地上，看着阳光透过叶隙洒落","靠在树干上，闭上眼睛，感受大自然的宁静"],
+  "窗边":["站在窗边，看着窗外的景色，思绪万千","坐在窗边的椅子上，享受阳光的温暖","靠在窗边的墙壁上，感受室内外的温差"],
+  "门口":["站在门口，迎接或送别，感受相聚与分离","坐在门口的台阶上，看着过往的行人","靠在门框上，等待或思考"]
+};
+
+const styleExpansions = {
+  "电影级":["电影级灯光，专业色彩校正，电影感构图，戏剧化氛围，高端制作水准，剧场级体验，沉浸式视觉效果，戏剧性取景，获奖电影摄影风格，精致电影质感"],
+  "写实":["超写实风格，照片级真实感，逼真的纹理细节，贴近生活的细节表现，真实光影效果，质感真实的材质，自然主义渲染，高保真视觉效果，现实世界的准确性，逼真的比例"],
+  "动画":["风格化动画，鲜艳的色彩，富有表现力的角色，流畅的动作，创意美术指导，艺术化诠释，富有想象力的视觉，活泼的美学风格，迷人的设计，动画叙事风格"],
+  "赛博朋克":["霓虹闪耀的赛博朋克城市，未来主义美学，高科技底层生活，全息投影，雨水浸透的街道，霓虹倒影，机械义体改造，暗黑未来风格，合成波氛围，反乌托邦氛围"],
+  "复古":["复古美学风格，怀旧氛围，经典复古造型，传统设计元素，旧世界的魅力，永恒的优雅，时代感细节，复古色调，古董道具，怀旧情绪"],
+  "日系":["日式美学风格，极简主义设计，柔和光线，淡雅配色，侘寂哲学，温柔的氛围，精致细腻的细节，含蓄的美，诗意的视觉，宁静的意境"],
+  "恐怖":["恐怖氛围，黑暗诡异，悬疑情绪，不安的视觉，阴影中的身影，不祥的灯光，阴森的气氛，令人毛骨悚然的细节，惊悚的氛围，脊背发凉的场景"],
+  "浪漫":["浪漫氛围，柔和光线，梦幻般的视觉，温柔的瞬间，真挚的情感，亲密的场景，温暖的色彩，温柔的情绪，深情的表达，感伤的氛围"],
+  "科幻":["科幻美学，未来科技，太空探索，先进文明，外星世界，科技奇迹，未来建筑，超凡脱俗的视觉，科幻想象，宇宙尺度"],
+  "奇幻":["奇幻世界，魔法元素，神话生物，神秘的风景，神秘的氛围，迷人的视觉效果，传说中的场景，史诗奇幻风格，魔幻现实主义，神奇的境界"],
+  "冒险":["冒险氛围，激动人心的时刻，史诗般的旅程，勇敢的壮举，探索精神，危险与刺激，英勇事迹，动作场面，任务驱动的叙事，冒险精神"],
+  "温馨":["温暖舒适的氛围，令人安心的视觉，家的感觉，温柔的瞬间，感人的场景，柔和光线，亲切的氛围，舒缓的色彩，宁静的情绪，宜人的环境"],
+  "史诗":["史诗规模，宏大的视觉效果，英雄主题，壮丽的风景，戏剧性时刻，传奇般的比例，电影化的宏伟，令人敬畏的场景，震撼的画面，庄严的氛围"],
+  "极简":["极简主义设计，简洁的美学，简约的优雅，干净的视觉，仅保留必要元素，精致的简约，含蓄的美，微妙的精致感，极简构图，少而精"],
+  "抽象":["抽象艺术，非具象视觉，艺术表达，情感诠释，创造性抽象，象征性意象，概念艺术，富有想象力的形式，表现力丰富的色彩，抽象构图"],
+  "水墨":["中国水墨画风格，毛笔笔触，黑白灰层次，极简优雅，流畅的线条，传统艺术，禅宗美学，艺术书法，文化传承，永恒之美"]
+};
+
+const lightingExpansions = {
+  "自然光":["自然阳光，柔和环境光，真实阴影，温暖的黄金时刻，漫射日光，自然照明，有机光线，阳光照耀的场景，自然色温，真实光照条件"],
+  "窗户光":["柔和的窗户光，漫射自然光，柔和阴影，室内环境光，真实室内照明，阳光透过窗户射入，柔和日间照明，温暖的窗户光晕，微妙的光线变化，自然光质量"],
+  "霓虹灯":["霓虹灯，鲜艳色彩，电发光效果，都市夜景灯光，多彩照明，霓虹氛围，发光招牌，未来感灯光，霓虹倒影，充满活力的夜间氛围"],
+  "烛光":["温暖烛光，闪烁火焰，私密氛围，浪漫照明，柔和金色光晕，环境温暖感，舒适照明，烛光场景，柔和光线变化，亲密场景"],
+  "月光":["清冷月光，银色照明，夜晚场景，柔和夜间光线，月光照耀的风景，空灵的光线，梦幻氛围，微妙阴影，神秘光晕，宁静夜晚"],
+  "舞台光":["戏剧性舞台灯光，聚光灯效果，剧场照明，戏剧化阴影，表演灯光，专业舞台设置，动态光线变化，剧场氛围，聚焦照明，戏剧性呈现"],
+  "柔光":["柔和漫射光，温和照明，最小阴影，平滑光线，讨人喜欢的光线质量，柔和光晕，梦幻氛围，温和高光，微妙光线，柔和环境光"],
+  "硬光":["强烈定向光，锐利阴影，戏剧性对比，强烈高光，强烈照明，清晰阴影，大胆光线，戏剧效果，惊人的光线质量，高对比度场景"],
+  "轮廓光":["轮廓光，逆光效果，发光边缘，剪影照明，戏剧性分离，高光轮廓，空灵光晕，与背景分离，发光边缘，戏剧性构图"],
+  "冷光":["冷色调照明，蓝色调，明快照明，现代感，冰冷氛围，临床照明，干净美学，清晰视觉，冷色调氛围，现代照明"],
+  "暖光":["暖色调照明，金色调，舒适氛围，诱人光晕，温暖氛围，舒适照明，欢迎感，柔和温暖，舒适照明，宜人温暖"]
+};
+
+const cameraExpansions = {
+  "大远景":["超大远景镜头展现浩瀚无垠的大地，史诗般的规模感，主体在宏伟背景中显得渺小，电影级广角开场镜头，令人震撼的空间感","宏大的极端广角镜头捕捉整个场景，全景式的视野，主体如同宏大世界中的微小元素，戏剧性的尺度对比，确立主体与环境的空间关系","广角极端镜头呈现巨大的空间尺度，地平线占据画面主导，主体被周围环境衬托得格外渺小，大气透视效果，电影感的开场构图"],
+  "远景":["远景镜头展现主体在环境中的位置，全身可见并带有周围环境，确立场景和设定，主体与周围世界的关系，电影化的情境镜头","广角镜头捕捉主体和环境，完整展示场景位置，主体有足够空间移动，确立空间关系，自然融入环境元素的构图","广角构图展示主体在其世界中的状态，充足的头部空间和引导空间，主体作为更大场景的一部分，通过构图讲述环境故事"],
+  "全景":["全景镜头展示从头到脚的完整主体，主体占据画面大部分但仍保留环境，平衡的构图，主体是明确焦点同时保持环境意识","全身镜头捕捉完整人物形象，主体充满垂直空间，清晰展示姿态和动作，边缘仍可见环境细节","全身构图强调肢体语言和姿态，主体主导画面，微妙的背景元素增添情境，平衡居中的构图"],
+  "中景":["中景镜头从腰部以上取景，完美适合对话和互动，展示面部表情和手势，亲密而不失情境感，经典的对话场景电影构图","双人中景镜头用于互动场景，人物从腰部或胸部以上展示，捕捉情感交流和肢体语言，理想的场景发展和人物动态镜头","中近景变化展示上半身，聚焦表情和手势同时保持一定环境感，叙事场景的多用途构图"],
+  "近景":["中近景镜头从胸部以上取景，强调面部表情和情感细微变化，与主体建立亲密联系，表情变化清晰可见，将观众带入角色内心世界","上半身特写镜头，细致的情感表达，观众与角色感同身受，微妙的微表情变得明显，强大的情感叙事能力","紧凑中景聚焦面部特征，眼睛和嘴巴成为视觉中心，情感亲密但不过分强烈，完美传达微妙情感"],
+  "特写":["特写镜头聚焦特定特征或细节，极致的亲密感，观众被带入瞬间，细节被放大并赋予意义，有力的电影化强调","紧凑特写对准眼睛、嘴巴或手部，每一个微妙动作和纹理都清晰可见，建立强烈的情感连接，极具电影感和冲击力的构图","微距般的特写强调细节，浅景深隔离主体，纹理和微妙动作被夸张表现，营造亲密和紧张的氛围"],
+  "大特写":["超大特写镜头对准单一元素，抽象而强烈，细节变得比实物更大，高度风格化和戏剧性，对观众产生震撼的感官冲击","极端特写对准眼睛、嘴唇或特定细节，观众沉浸在纹理和动作中，制造紧张感和亲密感，强有力的电影化强调手法","微观特写突破正常感知边界，细节被放大揭示隐藏纹理，抽象而艺术化，创造超现实的视觉体验"]
+};
+
+const cameraMoveExpansions = {
+  "固定镜头":["静态锁定镜头，摄像机完全静止，主体在画面内移动，经典电影手法，强调构图和框架，让观众仔细观察场景","静止摄像机创造稳定感，主体自然进出画面，观察性视角，纪录片般的质感，让观众细致欣赏构图","固定摄像机配合精心构图，主体在构图中移动，冥想般的节奏，电影化的静止，营造沉思的观看体验"],
+  "缓慢推镜":["缓慢推进镜头逐渐拉近与主体的距离，增加亲密感和聚焦度，情感逐步强化，电影化手法引导观众关注细节或情感","渐进推进镜头缓慢收窄画面，观众逐渐沉浸于主体，建立期待和紧张感，微妙而有力的电影化运动","平滑缓慢推进逐渐放大，主体变得更大更占主导，情感连接加深，经典电影化强调手法"],
+  "缓慢拉镜":["缓慢拉远镜头揭示更多环境，扩展观众视角，揭示情境和关系，创造尺度感或发现感","渐进拉远缓慢扩展画面，主体随着更多情境揭示而变小，情感距离或揭示，电影化手法展示更大图景","平滑缓慢拉远逐渐缩小，主体在更大情境中被揭示，尺度和视角转换，有力的叙事揭示手法"],
+  "横向平移":["平滑横向摇移镜头扫过场景，依次揭示细节，创造探索感，自然的人眼般运动，电影化扫描环境","水平摄像机运动揭示新元素，全景式探索，观众感觉像在转头，流畅自然的运动，通过运动推进叙事","左右方向摇移，逐步揭示场景元素，创造视觉流动，让观众以自然节奏探索环境"],
+  "垂直摇镜":["垂直摇移镜头上下扫描场景，揭示高度和深度，创造宏伟或亲密感，自然的仰视或俯视运动","垂直摄像机运动探索高度，从地面到天空或相反，揭示尺度和维度，电影化手法强调垂直元素","平滑上下摇移，逐步揭示垂直空间，创造视觉趣味和发现感，自然的人眼运动"],
+  "环绕镜头":["环绕摄像机围绕主体旋转，戏剧性360度视角，创造动感和能量，从各个角度揭示主体，电影化奇观","圆形摄像机运动围绕中心主体，戏剧性和沉浸感，观众感觉被场景包围，创造视觉兴奋和参与感","平滑环绕主体，揭示不同视角，动态而电影化，从各个角度强调主体，创造运动感"],
+  "升降镜头":["摇臂或伸缩臂镜头升降移动，戏剧性的高度变化，从上方或下方揭示，电影化的宏伟感，创造奇观感","摇臂带来的垂直摄像机运动，升起越过场景或下降，戏剧性的视角转变，揭示隐藏元素，电影化的宏伟登场或退场","平滑摇臂镜头提升摄像机，扩展观众视野，戏剧性的尺度变化，创造电影化的史诗感"],
+  "跟随拍摄":["跟拍镜头跟随主体运动，平滑运动匹配主体速度，创造亲密感和动感，观众与主体一同移动，电影化流畅感","轨道或稳定器跟拍主体侧面，平滑流畅的运动，观众从主体视角体验场景，创造参与感和沉浸感","平滑跟拍运动跟随动作，摄像机与主体同步移动，创造无缝流动，电影化手法跟随叙事发展"],
+  "手持拍摄":["手持摄像机运动带有自然抖动，纪录片般的真实感，创造紧迫感和真实性，亲密而直接，原始的电影感","有机手持运动带有微妙摄像机抖动，真实而未经修饰，创造在场感，纪录片风格的真实性，情感直接传递","抖动的手持画面传达紧迫或亲密感，自然的人体运动，原始未过滤，创造震撼的观看体验"],
+  "无人机航拍":["无人机航拍镜头提供鸟瞰视角，广阔的全景视野，戏剧性的尺度，电影化的宏伟感，从上方揭示风景","无人机航拍画面展示广阔景观，鸟瞰视角，戏剧性的尺度和范围，电影化奇观，从上方揭示图案和纹理","无人机镜头在空中移动，动态航拍视角，宏伟而电影化，以戏剧性方式揭示环境"],
+  "微距推进":["微距推进探索微小细节，揭示纹理和图案，亲密而揭示性，电影化的近距离审视，发现隐藏之美","渐进微距推进聚焦微小细节，纹理变得比实物更大，揭示性和亲密感，电影化手法近距离审视","微距摄像机运动探索微小细节，揭示复杂纹理，创造发现感，亲密而揭示性的电影化手法"]
+};
+
+const cameraAngleExpansions = {
+  "平视":["平视角度镜头，自然中立，建立连接和亲密感，观众与主体处于平等位置，经典电影视角","中立平视视角，舒适熟悉，观众自然与主体建立连接，平衡客观的观察点"],
+  "仰视":["低角度镜头仰视主体，使主体显得强大和主导，创造敬畏和尊重感，电影化手法强调重要性","摄像机置于视线下方，主体显得高大，创造戏剧效果，强调权力和重要性，英雄或威严角色的电影化手法"],
+  "俯视":["高角度镜头俯视主体，创造视角和尺度感，主体显得脆弱或渺小，电影化手法强调环境","摄像机置于场景上方，鸟瞰视角，创造概览感，主体在环境中被情境化，电影化手法展示关系"],
+  "倾斜角度":["倾斜角度制造视觉张力，倾斜的地平线创造不安感，电影化手法表现迷失方向，戏剧性和令人不安，用于悬疑或混乱场景","倾斜摄像机角度创造视觉不平衡，迷失方向且戏剧性，用于传达不安或紧张感，悬疑时刻的电影化手法"],
+  "过肩视角":["过肩镜头展示互动，创造亲密感和视角，观众通过一个角色的眼睛观看，对话场景的电影化手法","从一个角色背后拍摄看向另一个角色，创造自然观看视角，观众感觉参与对话，对话场景的经典电影构图"],
+  "第一人称视角":["POV镜头从角色视角展示场景，沉浸感和直接性，观众通过角色眼睛体验故事，电影化手法创造共情","第一人称视角让观众身临其境，沉浸而投入，创造共情和直接感，主观体验的电影化手法"]
+};
+
+const lensExpansions = {
+  "24mm 广角":["24mm广角镜头创造开阔视野，夸张的透视效果，增加景深，沉浸式和包容性，捕捉更多环境","24mm广角视角，戏剧性的空间关系，近景元素显得更大，创造被场景包围的感觉"],
+  "35mm 自然视角":["35mm镜头提供自然的人类视角，舒适的观看角度，平衡的比例，多用途且经典，最接近人眼所见","35mm自然视角，既不太宽也不太窄，舒适熟悉，日常场景的经典电影选择"],
+  "50mm 标准镜头":["50mm标准镜头呈现自然视角，真实平坦的比例，适用于所有场景，经典纪录片选择，真实不突兀","50mm定焦镜头提供自然视角，最小畸变，适用于任何场景，真实电影摄影的经典选择"],
+  "85mm 人像":["85mm人像镜头创造美丽的背景虚化，浅景深，脸型更柔和，电影级人像质感，主体从背景中突出","85mm长焦创造美丽的背景模糊，柔和的面部比例，电影感人像效果，主体被隔离和强调"],
+  "微距镜头":["微距镜头揭示微小细节，极端特写能力，浅景深，揭示隐藏纹理，亲密而揭示性","微距镜头捕捉微小细节，极端放大，揭示肉眼不可见的纹理和图案，亲密而迷人"],
+  "长焦":["长焦镜头压缩透视，远处主体显得更近，浅景深，隔离主体，电影化压缩效果","长焦视角压缩距离，主体看起来更近，从远处创造亲密感，电影化手法隔离主体"]
+};
+
+const durationExpansions = {
+  "5秒":{
+    "subject":["特写镜头聚焦面部表情，细微的表情变化，眼神流转，面部肌肉的细微抽动","近距离展现人物的瞬间反应，微表情丰富，眼神传达情感，面部细节清晰","聚焦人物的上半身，姿态优雅，动作简洁有力，表情生动传神"],
+    "action":["瞬间的动作，快速而精准，动作流畅自然，一气呵成","简短有力的动作，动作幅度适中，节奏感强，干净利落","快速完成的动作，动作连贯，不拖泥带水，展现爆发力"],
+    "scene":["简洁的场景，突出主体，背景虚化，环境氛围烘托主体","局部场景，聚焦细节，背景简洁，让主体成为焦点","紧凑的场景布局，主体占据画面中心，环境元素精简"]
+  },
+  "10秒":{
+    "subject":["中景展现人物全身，姿态自然，动作舒展，表情丰富生动","完整展现人物的动作过程，身体语言丰富，面部表情细腻","人物占据画面主要位置，动作流畅自然，展现完整的动作序列"],
+    "action":["连贯的动作序列，动作流畅自然，有始有终，节奏感分明","适度的动作幅度，动作过程完整，展现动作的细节和变化","动作层次分明，由慢到快或由快到慢，展现动作的节奏感"],
+    "scene":["完整的场景，环境元素丰富，背景交代清楚，氛围营造到位","中等规模的场景，主体与环境协调，背景元素衬托主体","场景细节丰富，光影效果突出，营造出沉浸式的氛围"]
+  },
+  "15秒":{
+    "subject":["全景展现人物与环境的关系，人物动作幅度大，表现力强","完整展现人物的情感变化过程，从平静到高潮，层次分明","人物与环境互动，展现人物在场景中的位置和状态变化"],
+    "action":["复杂的动作序列，动作层次丰富，有起承转合，展现完整的故事性","大幅度的动作变化，从一个动作过渡到另一个动作，流畅自然","动作与情感同步变化，动作幅度随情感起伏，展现情感的深度"],
+    "scene":["宏大的场景，环境元素丰富多样，背景层次分明，氛围浓厚","场景随时间变化，光影效果丰富，展现时间的流逝和氛围的转变","多场景切换的暗示，画面元素丰富，展现空间的广度和深度"]
+  },
+  "auto":{
+    "subject":["根据场景和动作自动调整人物展现方式，表情自然，动作流畅","人物展现恰到好处，既不夸张也不单调，符合整体氛围","人物与场景协调统一，展现自然真实的状态"],
+    "action":["动作自然流畅，节奏适中，根据内容自动调整动作幅度","动作与时长匹配，既不过于仓促也不过于拖沓","动作真实自然，符合人物性格和场景氛围"],
+    "scene":["场景元素丰富，氛围营造到位，根据内容自动调整场景细节","场景与内容协调，背景元素衬托主体，展现完整的画面感","场景层次分明，光影效果自然，营造出真实的环境氛围"]
+  }
+};
+
+/* ============================================================
+   2. 场景模板数据
+   ============================================================ */
+const sceneTemplates = {
+  "自定义":"",
+  "叙事故事类":"电影级写实风格，{duration}，{ratio}，温馨氛围\n0-3秒：[镜头运动]，[场景建立]，[主体引入]\n3-7秒：[镜头运动]，[情节发展]，[动作描述]\n7-11秒：[镜头运动]，[高潮/冲突]，[情绪爆发]\n11-13秒：[镜头运动]，[转折/过渡]\n13-15秒：[镜头运动]，[结尾/落版]\n【声音】配乐风格 + 音效 + 对白",
+  "产品展示类":"高端商业广告风格，{duration}，{ratio}\n0-2秒：开场抓眼球，产品特写或悬念设置\n2-5秒：产品全景展示，运镜环绕/推拉\n5-8秒：产品细节特写，材质/工艺展示\n8-12秒：使用场景，产品在实际环境中的应用\n12-15秒：品牌落版，slogan展示\n【声音】大气恢宏/轻快时尚/科技感配乐",
+  "角色动作类":"{style}风格，{duration}，{ratio}\n0-3秒：角色亮相，定格或缓慢展示造型\n3-6秒：动作起始，准备姿势\n6-11秒：核心动作展示（打斗/舞蹈/特技）\n11-13秒：动作收尾，pose定格\n13-15秒：特效/氛围强化，画面落版\n【声音】动作音效 + 氛围配乐",
+  "风景旅拍类":"电影级纪录片风格，{duration}，{ratio}\n0-3秒：大景别建立镜头，展示环境全貌\n3-6秒：中景推进，引入人物或细节\n6-10秒：多角度切换，展示环境不同面貌\n10-13秒：特写细节，光影变化\n13-15秒：回到大景别或意境落版\n【声音】环境音 + 氛围配乐",
+  "视频延长":"将@视频1延长{duration}\n延续前视频的风格和主体：\n0-X秒：[新内容描述]，与前视频无缝衔接\n【要求】保持角色一致性，动作连贯流畅",
+  "视频编辑":"基于@视频1进行编辑：\n【保留】原视频的运镜/部分动作/场景\n【修改】[具体修改点1]\n【修改】[具体修改点2]\n【颠覆】[剧情反转描述]\n【要求】保持镜头连贯，只在指定位置修改",
+  "情感冲突类":"快剪节奏/情绪爆发风格，{duration}，{ratio}\n0-3秒：[冲突开场]，[角色互动] 对白：[台词]\n3-7秒：[真相揭示]，[关键道具展示] 对白：[台词]\n7-12秒：[情感爆发]，[角色反应] 对白：[台词]\n12-15秒：[定格/落版]，[情感延续]\n【声音】环境音 + 氛围配乐 + 情感高潮音乐",
+  "产品动效展示":"亚克力玻璃质感/快闪风格/科技感，{duration}，{ratio}\n基于@图片1生成产品动效展示视频，用丝滑的动效设计和不同角度的运镜展示UI细节，最后无缝过渡到产品名称\n【参考】@图片1-N UI界面截图",
+  "空间漫游类":"沉浸式参观体验风格，{duration}，{ratio}\n基于@图片2设计稿分镜和@图片1平面图，生成一段沉浸式的空间参观视频，严格按照@图片2的分镜顺序生成视频，模拟真实参观的行走路线\n【声音】氛围配乐 + 环境音 + 转场音效",
+  "角色对战类":"写实/动画/电影质感风格，{duration}，{ratio}\nFigure 1与Figure 2在[场景]中进行对战\n注意：使用Figure 1、Figure 2替代角色名称，避免版权问题\n【参考】@图片1 角色1，@图片2 角色2，@视频1 动作参考",
+  "口播类":"专业播客/自然对话风格，{duration}，{ratio}\n使用@图片1的人物和环境，然后使用@音频1作为人物的声音内容，生成一个口播视频，需要加上字幕\n【声音】@音频1 作为声音源",
+  "音乐卡点类":"卡点剪辑/转场特效风格，{duration}\n将图片@图N...@图1依次按顺序，卡入@音频1的卡点中\n【要求】画面切换与音乐节奏同步，转场自然流畅\n【参考】@图片1-N 照片素材，@音频1 背景音乐",
+  "战争场景类":"电影级写实风格，手持镜头质感，紧张压抑氛围，{duration}，2.35:1电影宽屏\n0-4秒：[主体]缓慢进入[场景]，低角度视角推进，环境细节展示\n4-8秒：[冲突爆发]，[交火场景]，镜头快速移动\n8-12秒：[推进过程]，进入[新场景]，光线变化\n12-15秒：[占据高点]，俯瞰[全景]，镜头拉远\n【声音】环境音 + 紧张氛围配乐",
+  "长镜头追踪":"电影级写实风格，动态模糊，高速镜头追踪，{duration}，2.35:1\n0-2秒：[场景建立]，[主体准备]，[特写细节]\n2-3秒：[动作起始]，[特写关键部位]\n3-5秒：[动作释放]，[画面震动]\n5-12秒：[镜头加速]，锁定在[飞行物体]上，镜头紧随其后，记录[飞行轨迹]\n12-15秒：[目标命中]，[特写结果]，画面定格，渐隐\n【声音】[释放声] + [飞行音效] + [命中音效]",
+  "伪纪录片类":"伪纪录片风格，超写实主义，固定机位实拍感，自然光，{duration}，9:16竖屏\n0-6秒（日常铺垫）：场景：[场景描述]。动作：[日常动作]\n6-11秒（异常出现）：动作：[动作转变]。高能时刻：[异常现象描述]\n11-15秒（结尾反转）：动作：[主角反应]。结果：[最终状态]，画面定格\n【声音】日常环境音 + 突变音效"
+};
+
+/* ============================================================
+   3. 情绪预设数据
+   ============================================================ */
+const moodPresets = {
+  "电影质感":{"source":"自然光","color":"黄金时刻","atmosphere":"无","custom":"cinematic look, anamorphic lens flare, teal and orange color grade, dramatic shadows, film grain"},
+  "赛博朋克":{"source":"霓虹灯","color":"霓虹赛博","atmosphere":"雨丝","custom":"neon noir, wet reflections, magenta and cyan light, futuristic dystopia"},
+  "复古怀旧":{"source":"窗户光","color":"温暖钨丝灯","atmosphere":"尘埃","custom":"vintage retro look, warm faded tones, film grain, nostalgic atmosphere, soft glow"},
+  "日系清新":{"source":"窗户光","color":"自然中性","atmosphere":"无","custom":"fresh and clean, soft natural light, airy and bright, pastel tones, Japanese aesthetic"},
+  "暗黑恐怖":{"source":"硬光","color":"冷色调","atmosphere":"薄雾","custom":"dark horror, high contrast shadows, eerie green tint, unsettling atmosphere, dramatic low key lighting"},
+  "浪漫唯美":{"source":"柔光","color":"温暖钨丝灯","atmosphere":"薄雾","custom":"romantic and beautiful, soft dreamy light, warm golden glow, shallow depth of field, intimate"},
+  "史诗宏大":{"source":"自然光","color":"黄金时刻","atmosphere":"薄雾","custom":"epic and grand, golden hour light, atmospheric haze, dramatic scale, sweeping vista"},
+  "奢华高级":{"source":"轮廓光","color":"温暖钨丝灯","atmosphere":"无","custom":"luxurious and premium, controlled rim light, polished surfaces, elegant and sophisticated"},
+  "清新治愈":{"source":"窗户光","color":"自然中性","atmosphere":"无","custom":"fresh and healing, soft natural light, airy and bright, gentle and calming"}
+};
+
+/* ============================================================
+   4. 预设模板（基本设置页快速模板）
+   ============================================================ */
+const presetTemplates = {
+  "🎬 电影预告片":{"duration":"15秒","ratio":"2.35:1","quality":"Ultra","shotScale":"大远景","cameraMove":"缓慢推镜","lightSource":"舞台光","medium":"真人实拍","surface":"胶片质感","customStyle":"电影预告片风格，史诗感，宏大场面，震撼视觉效果"},
+  "🎥 产品展示":{"duration":"10秒","ratio":"16:9","quality":"Ultra","shotScale":"中景","cameraMove":"环绕镜头","lightSource":"柔光","medium":"真人实拍","surface":"数码质感","customStyle":"产品展示视频，专业摄影，细节清晰，质感高级"},
+  "🌅 风景短片":{"duration":"15秒","ratio":"16:9","quality":"High","shotScale":"大远景","cameraMove":"缓慢拉镜","lightSource":"自然光","medium":"真人实拍","surface":"自然质感","customStyle":"自然风光短片，壮丽景色，宁静氛围，治愈系"},
+  "🎭 人物访谈":{"duration":"10秒","ratio":"16:9","quality":"High","shotScale":"中景","cameraMove":"固定镜头","lightSource":"柔光","medium":"真人实拍","surface":"自然质感","customStyle":"人物访谈风格，专业灯光，自然表情，真实感"},
+  "📱 社交媒体":{"duration":"5秒","ratio":"9:16","quality":"Standard","shotScale":"近景","cameraMove":"跟随拍摄","lightSource":"自然光","medium":"真人实拍","surface":"数码质感","customStyle":"社交媒体视频，快节奏，明亮色彩，吸引人眼球"},
+  "🎪 商业广告":{"duration":"10秒","ratio":"16:9","quality":"Ultra","shotScale":"全景","cameraMove":"无人机航拍","lightSource":"柔光","medium":"真人实拍","surface":"数码质感","customStyle":"商业广告风格，专业制作，品牌感强，吸引注意力"},
+  "🎨 艺术创作":{"duration":"15秒","ratio":"1:1","quality":"High","shotScale":"特写","cameraMove":"微距推进","lightSource":"轮廓光","medium":"油画风格","surface":"油画质感","customStyle":"艺术创作风格，创意无限，视觉独特，艺术表达"}
+};
+
+/* ============================================================
+   5. 镜头选项数据
+   ============================================================ */
+const shotScaleOptions=[
+  {text:"大远景 (Extreme Wide)",value:"大远景"},
+  {text:"远景 (Wide Shot)",value:"远景"},
+  {text:"全景 (Full Shot)",value:"全景"},
+  {text:"中景 (Medium Shot)",value:"中景",default:true},
+  {text:"近景 (Medium Close-up)",value:"近景"},
+  {text:"特写 (Close-up)",value:"特写"},
+  {text:"大特写 (Extreme Close-up)",value:"大特写"}
+];
+const cameraMoveOptions=["固定镜头","缓慢推镜","缓慢拉镜","横向平移","垂直摇镜","环绕镜头","升降镜头","跟随拍摄","手持拍摄","无人机航拍","微距推进"];
+const angleOptions=[
+  {text:"平视 (Eye Level)",value:"平视",default:true},
+  {text:"仰视 (Low Angle)",value:"仰视"},
+  {text:"俯视 (High Angle)",value:"俯视"},
+  {text:"倾斜角度 (Dutch Angle)",value:"倾斜角度"},
+  {text:"过肩视角 (Over-the-shoulder)",value:"过肩视角"},
+  {text:"第一人称视角 (POV)",value:"第一人称视角"}
+];
+const lensOptions=["不指定","24mm 广角","35mm 自然视角","50mm 标准镜头","85mm 人像","微距镜头","长焦"];
+const lightSourceOptions=[
+  {text:"自然光 (日光/天光)",value:"自然光",default:true},
+  {text:"窗户光 (Soft Window)",value:"窗户光"},
+  {text:"霓虹灯 (Neon)",value:"霓虹灯"},
+  {text:"烛光/火焰",value:"烛光"},
+  {text:"月光",value:"月光"},
+  {text:"舞台光",value:"舞台光"},
+  {text:"柔光 (Soft Light)",value:"柔光"},
+  {text:"硬光 (Hard Light)",value:"硬光"},
+  {text:"轮廓光 (Rim Light)",value:"轮廓光"},
+  {text:"冷光",value:"冷光"},
+  {text:"暖光",value:"暖光"}
+];
+const atmosphereOptions=[
+  {text:"无",value:"无",default:true},
+  {text:"薄雾 (Mist)",value:"薄雾"},
+  {text:"浓雾",value:"浓雾"},
+  {text:"雨丝 (Rain)",value:"雨丝"},
+  {text:"雪花 (Snow)",value:"雪花"},
+  {text:"烟雾 (Smoke)",value:"烟雾"},
+  {text:"光斑",value:"光斑"},
+  {text:"尘埃 (Dust)",value:"尘埃"}
+];
+
+/* 时间轴分镜镜头选项 */
+const timelineShotOptions=["不指定","大远景","远景","全景","中景","近景","特写","大特写","推镜头","拉镜头","摇镜头","移镜头","跟拍","环绕拍摄","航拍","手持跟拍","希区柯克变焦","一镜到底","慢动作","快切"];
+
+/* ============================================================
+   6. 历史记录
+   ============================================================ */
+let history=[];
+const HISTORY_MAX=50;
+
+/* ============================================================
+   UI 初始化
+   ============================================================ */
+function initUI(){
+  // 景别 radio
+  let sg=$('shotScaleGrid');
+  shotScaleOptions.forEach(o=>{
+    let l=document.createElement('label');l.className='inline';
+    l.innerHTML=`<input type="radio" name="shotScale" value="${o.value}" ${o.default?'checked':''} onchange="generatePrompt()">${o.text}`;
+    sg.appendChild(l);
+  });
+  // 运镜
+  let cm=$('cameraMove');
+  cameraMoveOptions.forEach(o=>{
+    let op=document.createElement('option');op.value=o;op.textContent=o;
+    if(o==='缓慢推镜')op.selected=true;
+    cm.appendChild(op);
+  });
+  // 角度
+  let ag=$('angleGrid');
+  angleOptions.forEach(o=>{
+    let l=document.createElement('label');l.className='inline';
+    l.innerHTML=`<input type="radio" name="cameraAngle" value="${o.value}" ${o.default?'checked':''} onchange="generatePrompt()">${o.text}`;
+    ag.appendChild(l);
+  });
+  // 镜头
+  let le=$('lens');
+  lensOptions.forEach(o=>{
+    let op=document.createElement('option');op.value=o;op.textContent=o;
+    if(o==='不指定')op.selected=true;
+    le.appendChild(op);
+  });
+  // 光源
+  let ls=$('lightSourceGrid');
+  lightSourceOptions.forEach(o=>{
+    let l=document.createElement('label');l.className='inline';
+    l.innerHTML=`<input type="radio" name="lightSource" value="${o.value}" ${o.default?'checked':''} onchange="generatePrompt()">${o.text}`;
+    ls.appendChild(l);
+  });
+  // 氛围
+  let at=$('atmosphereGrid');
+  atmosphereOptions.forEach(o=>{
+    let l=document.createElement('label');l.className='inline';
+    l.innerHTML=`<input type="radio" name="atmosphere" value="${o.value}" ${o.default?'checked':''} onchange="generatePrompt()">${o.text}`;
+    at.appendChild(l);
+  });
+  // 场景模板下拉
+  let ts=$('templateSelect');
+  Object.keys(sceneTemplates).forEach(k=>{
+    let op=document.createElement('option');op.value=k;op.textContent=k;
+    ts.appendChild(op);
+  });
+  // 情绪预设下拉
+  let mp=$('moodPreset');
+  let mpOpts=['自定义','电影质感','赛博朋克','复古怀旧','日系清新','暗黑恐怖','浪漫唯美','史诗宏大','奢华高级','清新治愈'];
+  mpOpts.forEach(k=>{
+    let op=document.createElement('option');op.value=k;op.textContent=k;
+    mp.appendChild(op);
+  });
+  // 导航切换
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.addEventListener('click',()=>switchTab(item.dataset.tab));
+  });
+  // 初始化时间轴
+  rebuildTimelineSegments();
+  // 初始生成
+  generatePrompt();
+  initAISettings();
+}
+
+function switchTab(tabId){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
+  $('panel-'+tabId).classList.add('active');
+  if(tabId==='result') generatePrompt();
+}
+
+/* 读取 radio 值 */
+function radioVal(name){
+  let el=document.querySelector(`input[name="${name}"]:checked`);
+  return el?el.value:'';
+}
+
+/* ============================================================
+   时间轴分镜
+   ============================================================ */
+function onTimelineToggle(){
+  rebuildTimelineSegments();
+  generatePrompt();
+}
+
+function onDurationChange(){
+  if(isChecked('timelineEnabled')) rebuildTimelineSegments();
+}
+
+function rebuildTimelineSegments(){
+  let container=$('timelineSegments');
+  container.innerHTML='';
+  if(!isChecked('timelineEnabled')){
+    container.innerHTML='<div class="hint" style="padding:20px;text-align:center">未启用时间戳分镜。勾选上方复选框即可按时间段精确控制画面内容。</div>';
+    return;
+  }
+  let duration=val('duration');
+  let segments;
+  if(duration==='5秒'){
+    segments=[["0-2秒","开场镜头，建立场景"],["2-5秒","核心内容，主体动作"]];
+  }else if(duration==='10秒'){
+    segments=[["0-3秒","开场镜头，建立场景"],["3-6秒","发展，引入主体"],["6-10秒","高潮/结尾，核心动作"]];
+  }else if(duration==='15秒'){
+    segments=[["0-3秒","开场镜头，建立场景"],["3-7秒","发展，引入主体/冲突"],["7-11秒","高潮，核心动作/情感爆发"],["11-13秒","转折/过渡"],["13-15秒","结尾/落版"]];
+  }else{
+    segments=[["0-3秒","开场镜头"],["3-7秒","发展"],["7-11秒","高潮"],["11-15秒","结尾"]];
+  }
+  segments.forEach((seg,i)=>{
+    let [timeRange,hint]=seg;
+    let div=document.createElement('div');div.className='tl-seg';
+    let head=document.createElement('div');head.className='tl-seg-head';
+    let timeLabel=document.createElement('span');timeLabel.className='time';timeLabel.textContent=timeRange;
+    head.appendChild(timeLabel);
+    let shotLabel=document.createElement('label');shotLabel.textContent='镜头:';shotLabel.style.fontSize='12px';shotLabel.style.color='var(--text-light)';
+    head.appendChild(shotLabel);
+    let shotSelect=document.createElement('select');
+    timelineShotOptions.forEach(o=>{let op=document.createElement('option');op.value=o;op.textContent=o;shotSelect.appendChild(op);});
+    shotSelect.onchange=()=>generatePrompt();
+    head.appendChild(shotSelect);
+    div.appendChild(head);
+    let desc=document.createElement('textarea');desc.rows=2;desc.value=hint;desc.placeholder='画面描述...';
+    desc.oninput=()=>generatePrompt();
+    div.appendChild(desc);
+    container.appendChild(div);
+  });
+}
+
+function generateTimelineText(){
+  if(!isChecked('timelineEnabled')) return '';
+  let container=$('timelineSegments');
+  let segs=[];
+  container.querySelectorAll('.tl-seg').forEach(seg=>{
+    let timeRange=seg.querySelector('.time').textContent;
+    let shot=seg.querySelector('select').value;
+    let desc=seg.querySelector('textarea').value.trim();
+    if(desc){
+      if(shot&&shot!=='不指定'){
+        segs.push(`${timeRange}：${shot}，${desc}`);
+      }else{
+        segs.push(`${timeRange}：${desc}`);
+      }
+    }
+  });
+  return segs.length?segs.join('；'):'';
+}
+
+/* ============================================================
+   场景模板
+   ============================================================ */
+function onTemplateSelected(){
+  let name=$('templateSelect').value;
+  let content=sceneTemplates[name]||'';
+  let duration=val('duration');
+  let ratio=val('ratio');
+  let style='写实';
+  if(content){
+    content=content.replace(/\{duration\}/g,duration).replace(/\{ratio\}/g,ratio).replace(/\{style\}/g,style);
+  }
+  $('templatePreview').textContent=content||'选择一个模板查看结构...';
+}
+
+function applySceneTemplate(){
+  let name=$('templateSelect').value;
+  if(name==='自定义'){setStatus('请选择一个具体模板');return;}
+  onTemplateSelected();
+  let content=$('templatePreview').textContent.trim();
+  if(content){
+    setVal('prefixText',`[模板:${name}]`);
+  }
+  setStatus('已应用模板: '+name);
+  generatePrompt();
+}
+
+/* ============================================================
+   情绪预设
+   ============================================================ */
+function applyMoodPreset(){
+  let preset=$('moodPreset').value;
+  if(preset==='自定义'){setStatus('请选择一个具体预设');return;}
+  let p=moodPresets[preset];
+  if(!p) return;
+  // 设置光源 radio
+  let r=document.querySelector(`input[name="lightSource"][value="${p.source}"]`);
+  if(r) r.checked=true;
+  // 色温
+  setVal('colorTemp',p.color);
+  // 氛围
+  let ar=document.querySelector(`input[name="atmosphere"][value="${p.atmosphere}"]`);
+  if(ar) ar.checked=true;
+  // 自定义灯光
+  setVal('lightCustom',p.custom);
+  generatePrompt();
+  setStatus('已应用情绪预设: '+preset);
+}
+
+/* ============================================================
+   禁止项
+   ============================================================ */
+function addBanItem(text){
+  let ta=$('banText');
+  let current=ta.value.trim();
+  let item=text.replace(/禁止/g,'');
+  if(current.indexOf(item)===-1){
+    ta.value=current?(current+'，'+item):item;
+    generatePrompt();
+  }
+}
+
+/* ============================================================
+   时间分段（10秒/15秒自动分镜）
+   ============================================================ */
+function generateTimeSegments(duration){
+  let subject=val('subjectText');
+  let action=val('actionText');
+  let scene=val('sceneText');
+  let segments;
+  if(duration==='10秒'){
+    segments=[
+      `0-3秒: 开场建立场景，${scene.slice(0,8)||'环境设置'}，${subject.slice(0,8)||'主体'}进入画面`,
+      `3-6秒: ${action.slice(0,10)||'动作发展'}，镜头推进，展现细节`,
+      `6-10秒: 高潮时刻，${action.slice(0,10)||'关键动作'}完成，表情特写`
+    ];
+  }else if(duration==='15秒'){
+    segments=[
+      `0-3秒: 大远景建立空间，${scene.slice(0,8)||'环境全貌'}，${subject.slice(0,8)||'主体'}出现`,
+      `3-7秒: 中景展现，${action.slice(0,10)||'动作开始'}，人物与环境互动`,
+      `7-11秒: 近景特写，${action.slice(0,10)||'动作高潮'}，表情细节丰富`,
+      `11-15秒: 收尾，镜头拉远，${scene.slice(0,8)||'场景回归'}，情感升华`
+    ];
+  }
+  return segments?segments.join('\n'):'';
+}
+
+/* ============================================================
+   核心生成逻辑 generatePrompt（完全翻译自 Python）
+   ============================================================ */
+function generatePrompt(){
+  let promptParts=[];
+
+  // 1. 自定义前缀
+  let prefix=val('prefixText');
+  if(prefix) promptParts.push(prefix);
+
+  // 2. 主体和动作
+  let subject=val('subjectText');
+  let action=val('actionText');
+  let scene=val('sceneText');
+  let duration=val('duration');
+
+  // 动作扩展（关键词匹配）
+  let actionExpanded=action;
+  if(action){
+    for(let actionKey in actionExpansions){
+      if(action.indexOf(actionKey)!==-1){
+        let expandedDesc=randomChoice(actionExpansions[actionKey]);
+        if(actionExpanded.indexOf(expandedDesc)===-1){
+          actionExpanded+='，'+expandedDesc;
+        }
+        break;
+      }
+    }
+  }
+  // 时长动作扩展
+  if(durationExpansions[duration]){
+    let durationAction=randomChoice(durationExpansions[duration].action);
+    if(actionExpanded.indexOf(durationAction)===-1){
+      actionExpanded+=(actionExpanded?'，':'')+durationAction;
+    }
+  }
+  // 主体扩展（时长）
+  let subjectExpanded=subject;
+  if(durationExpansions[duration]&&subject){
+    let durationSubject=randomChoice(durationExpansions[duration].subject);
+    if(subjectExpanded.indexOf(durationSubject)===-1){
+      subjectExpanded+='，'+durationSubject;
+    }
+  }
+
+  if(subjectExpanded&&actionExpanded){
+    promptParts.push(`${subjectExpanded}，${actionExpanded}`);
+  }else if(subjectExpanded){
+    promptParts.push(subjectExpanded);
+  }
+
+  // 场景扩展（关键词匹配 + 场景互动扩展）
+  let sceneExpanded=scene;
+  if(scene){
+    for(let sceneKey in sceneExpansions){
+      if(scene.indexOf(sceneKey)!==-1){
+        let expandedDesc=randomChoice(sceneExpansions[sceneKey]);
+        if(sceneExpanded.indexOf(expandedDesc)===-1){
+          sceneExpanded+='，'+expandedDesc;
+        }
+        break;
+      }
+    }
+    for(let interactionKey in sceneInteractionExpansions){
+      if(scene.indexOf(interactionKey)!==-1){
+        let interactionDesc=randomChoice(sceneInteractionExpansions[interactionKey]);
+        if(sceneExpanded.indexOf(interactionDesc)===-1){
+          sceneExpanded+='，'+interactionDesc;
+        }
+        break;
+      }
+    }
+  }
+  // 时长场景扩展
+  if(durationExpansions[duration]){
+    let durationScene=randomChoice(durationExpansions[duration].scene);
+    if(sceneExpanded.indexOf(durationScene)===-1){
+      sceneExpanded+=(sceneExpanded?'，':'')+durationScene;
+    }
+  }
+  if(sceneExpanded) promptParts.push(sceneExpanded);
+
+  // 2.5 时间分段格式 (10秒以上)
+  if(duration==='10秒'||duration==='15秒'){
+    let timeSegments=generateTimeSegments(duration);
+    if(timeSegments) promptParts.push(timeSegments);
+  }
+
+  // 台词描述
+  let dialogue=val('dialogueText');
+  if(dialogue){
+    promptParts.push(`「${dialogue}」`);
+  }
+
+  // 时间轴分镜
+  if(isChecked('timelineEnabled')){
+    let timelineText=generateTimelineText();
+    if(timelineText) promptParts.push(timelineText);
+  }
+
+  // 3. 风格
+  let styleParts=[];
+  let medium=val('medium');
+  if(medium&&medium!=='真人实拍') styleParts.push(`${medium}风格`);
+  let mood=val('mood');
+  if(mood&&mood!=='自然') styleParts.push(`${mood}氛围`);
+  let rhythm=val('rhythm');
+  if(rhythm) styleParts.push(`${rhythm}节奏`);
+  let qualityLevel=val('qualityLevel');
+  if(qualityLevel&&qualityLevel!=='专业级') styleParts.push(`${qualityLevel}制作`);
+  let surface=val('surface');
+  if(surface&&surface!=='自然质感') styleParts.push(`${surface}质感`);
+  let palette=val('palette');
+  if(palette&&palette!=='自然色彩') styleParts.push(`${palette}色调`);
+  let render=val('render');
+  if(render&&render!=='电影级') styleParts.push(`${render}呈现`);
+  let styleCustom=val('styleCustom');
+  if(styleCustom) styleParts.push(styleCustom);
+  if(styleParts.length) promptParts.push(styleParts.join(', '));
+
+  // 4. 镜头
+  let cameraParts=[];
+  let shotScale=radioVal('shotScale');
+  if(shotScale&&cameraExpansions[shotScale]){
+    cameraParts.push(randomChoice(cameraExpansions[shotScale]));
+  }
+  let cameraMove=val('cameraMove');
+  let moveSpeed=val('moveSpeed');
+  if(cameraMove&&cameraMoveExpansions[cameraMove]){
+    let expandedMove=randomChoice(cameraMoveExpansions[cameraMove]);
+    if(cameraMove.indexOf('固定')===-1&&moveSpeed){
+      expandedMove=`${moveSpeed}${expandedMove}`;
+    }
+    cameraParts.push(expandedMove);
+  }
+  let cameraAngle=radioVal('cameraAngle');
+  if(cameraAngle&&cameraAngleExpansions[cameraAngle]){
+    cameraParts.push(randomChoice(cameraAngleExpansions[cameraAngle]));
+  }
+  let lens=val('lens');
+  if(lens!=='不指定'&&lensExpansions[lens]){
+    cameraParts.push(randomChoice(lensExpansions[lens]));
+  }
+  if(cameraParts.length) promptParts.push(cameraParts.join(', '));
+
+  // 5. 灯光
+  let lightParts=[];
+  let lightSource=radioVal('lightSource');
+  if(lightSource&&lightSource!=='自然光') lightParts.push(`${lightSource}照明`);
+  let colorTemp=val('colorTemp');
+  if(colorTemp&&colorTemp!=='自然中性') lightParts.push(colorTemp);
+  let atmosphere=radioVal('atmosphere');
+  if(atmosphere&&atmosphere!=='无') lightParts.push(`${atmosphere}氛围`);
+  let lightCustom=val('lightCustom');
+  if(lightCustom) lightParts.push(lightCustom);
+  if(lightParts.length) promptParts.push(lightParts.join('，'));
+
+  // 6. 音效 【Sound】格式
+  let audioParts=[];
+  let ambient=val('ambient');
+  if(ambient&&ambient!=='无环境音') audioParts.push(ambient);
+  let sfx=val('sfxText');
+  if(sfx) audioParts.push(sfx);
+  let music=val('music');
+  if(music&&music!=='无') audioParts.push(`${music}背景音乐`);
+  if(isChecked('hasVoice')){
+    let voice=val('voiceText');
+    if(voice) audioParts.push(`人声: ${voice}`);
+  }
+  if(audioParts.length) promptParts.push(`【Sound】${audioParts.join(',')}`);
+
+  // 7. 约束条件
+  let constraint=val('constraintText');
+  if(constraint) promptParts.push(`约束条件: ${constraint}`);
+
+  // 质量增强
+  let qualityParts=[];
+  if(isChecked('highDetail')) qualityParts.push('高细节');
+  if(isChecked('cinematic')) qualityParts.push('电影感');
+  if(isChecked('stable')) qualityParts.push('稳定运动');
+  if(isChecked('highRes')) qualityParts.push('高分辨率');
+  if(qualityParts.length) promptParts.push(qualityParts.join('，'));
+
+  // 8. 自定义后缀
+  let suffix=val('suffixText');
+  if(suffix) promptParts.push(suffix);
+
+  // 8.5 禁止项声明
+  let banText=val('banText');
+  if(banText) promptParts.push('禁止: '+banText);
+
+  // 9. 负面提示词
+  let negative=val('negativeText');
+
+  // 组合最终提示词
+  let finalPrompt=promptParts.join('. ');
+  if(finalPrompt&&!finalPrompt.endsWith('.')) finalPrompt+='.';
+  if(negative) finalPrompt+=`\n\n负面提示词: ${negative}`;
+
+  // 参数信息行
+  let mode=radioVal('mode');
+  let ratioVal=val('ratio');
+  let quality=val('quality');
+  finalPrompt+=`\n\n---\n参数: ${mode} | ${duration} | ${ratioVal} | ${quality}`;
+
+  // 更新结果
+  $('resultText').value=finalPrompt;
+  let wordCount=finalPrompt.replace(/\n/g,'').replace(/ /g,'').length;
+  $('countLabel').textContent=wordCount;
+
+  // 保存历史
+  saveToHistory(finalPrompt);
+}
+
+/* ============================================================
+   历史记录
+   ============================================================ */
+function saveToHistory(prompt){
+  if(!prompt||prompt.length<10) return;
+  let now=new Date();
+  let ts=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  history.unshift({time:ts,prompt:prompt,duration:val('duration'),ratio:val('ratio')});
+  if(history.length>HISTORY_MAX) history=history.slice(0,HISTORY_MAX);
+}
+function pad(n){return n<10?'0'+n:''+n;}
+
+function showHistory(){
+  if(!history.length){setStatus('暂无历史记录');return;}
+  let w=window.open('','_blank','width=820,height=640');
+  if(!w){setStatus('请允许弹出窗口查看历史记录');return;}
+  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>📜 提示词历史记录</title>
+  <style>body{font-family:'Microsoft YaHei',sans-serif;background:#1a1a1a;color:#fff;margin:0;padding:16px}
+  h2{margin:0 0 12px}input,button,textarea,select{font-family:inherit}
+  .search{margin-bottom:12px}.search input{padding:6px 10px;width:60%;border-radius:6px;border:1px solid #444;background:#0d0d0d;color:#fff}
+  .list{background:#0d0d0d;border-radius:8px;max-height:260px;overflow-y:auto;margin-bottom:12px}
+  .item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #222;font-size:13px}.item:hover{background:#1e293b}.item.active{background:#4F46E5}
+  textarea{width:100%;height:180px;border-radius:8px;border:1px solid #444;background:#0d0d0d;color:#fff;padding:10px;font-family:Consolas,monospace;font-size:13px}
+  .btns{margin-top:10px;display:flex;gap:8px}button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+  .b1{background:#6366F1;color:#fff}.b2{background:#10B981;color:#fff}.b3{background:#EF4444;color:#fff}.b4{background:#F59E0B;color:#fff}</style></head><body>
+  <h2>📜 提示词历史记录 (共 ${history.length} 条)</h2>
+  <div class="search"><input id="search" placeholder="🔍 搜索提示词..." oninput="filter()"></div>
+  <div class="list" id="list"></div>
+  <textarea id="preview" readonly></textarea>
+  <div class="btns">
+    <button class="b1" onclick="copyItem()">📋 复制</button>
+    <button class="b3" onclick="delItem()">🗑️ 删除选中</button>
+    <button class="b4" onclick="clearAll()">🗑️ 清空全部</button>
+    <button onclick="window.close()">关闭</button>
+  </div>
+  <script>
+  let data=${JSON.stringify(history)};
+  let selIdx=-1;
+  function render(list){
+    let c=document.getElementById('list');c.innerHTML='';
+    list.forEach((r,i)=>{
+      let d=document.createElement('div');d.className='item'+(i===selIdx?' active':'');
+      d.textContent='['+r.time+'] '+r.duration+' '+r.ratio+' - '+r.prompt.slice(0,60)+'...';
+      d.onclick=()=>{selIdx=history.indexOf(r);document.getElementById('preview').value=r.prompt;render(list);};
+      c.appendChild(d);
+    });
+  }
+  let history=data;
+  function filter(){let k=document.getElementById('search').value.toLowerCase();let f=data.filter(r=>r.prompt.toLowerCase().indexOf(k)!==-1);render(f);}
+  render(data);
+  function copyItem(){if(selIdx>=0&&data[selIdx]){navigator.clipboard.writeText(data[selIdx].prompt);alert('已复制到剪贴板');}}
+  function delItem(){if(selIdx>=0){data.splice(selIdx,1);selIdx=-1;render(data);}}
+  function clearAll(){if(confirm('确定清空全部？')){data=[];render(data);}}
+  <\/script></body></html>`;
+  w.document.write(html);w.document.close();
+}
+
+/* ============================================================
+   复制 / 保存
+   ============================================================ */
+function copyToClipboard(){
+  let prompt=$('resultText').value;
+  if(prompt.indexOf('---')!==-1) prompt=prompt.split('---')[0].trim();
+  navigator.clipboard.writeText(prompt).then(()=>{
+    setStatus('已复制到剪贴板！');
+  }).catch(()=>{
+    // fallback
+    let ta=$('resultText');ta.select();
+    try{document.execCommand('copy');setStatus('已复制到剪贴板！');}
+    catch(e){setStatus('复制失败，请手动复制');}
+  });
+}
+
+function saveToFile(){
+  let prompt=$('resultText').value;
+  let blob=new Blob([prompt],{type:'text/plain;charset=utf-8'});
+  let url=URL.createObjectURL(blob);
+  let a=document.createElement('a');
+  a.href=url;
+  let ts=new Date();
+  a.download=`seedance_prompt_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}.txt`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setStatus('已保存到文件');
+}
+
+/* ============================================================
+   智能优化 / 智能填充
+   ============================================================ */
+function smartFill(){
+  let subject=val('subjectText');
+  let action=val('actionText');
+  let scene=val('sceneText');
+  let filled=0;
+
+  if(subject&&!action){
+    for(let key in actionExpansions){
+      if(subject.indexOf(key)!==-1){
+        setVal('actionText',randomChoice(actionExpansions[key]));filled++;break;
+      }
+    }
+  }
+  if(subject&&!scene){
+    for(let key in sceneExpansions){
+      if(subject.indexOf(key)!==-1){
+        setVal('sceneText',randomChoice(sceneExpansions[key]));filled++;break;
+      }
+    }
+  }
+  if(scene&&!subject){
+    for(let key in subjectExpansions){
+      if(scene.indexOf(key)!==-1){
+        setVal('subjectText',randomChoice(subjectExpansions[key]));filled++;break;
+      }
+    }
+  }
+  if(!subject){
+    let keys=Object.keys(subjectExpansions);
+    setVal('subjectText',randomChoice(subjectExpansions[randomChoice(keys)]));filled++;
+  }
+  if(!action){
+    let keys=Object.keys(actionExpansions);
+    setVal('actionText',randomChoice(actionExpansions[randomChoice(keys)]));filled++;
+  }
+  if(!scene){
+    let keys=Object.keys(sceneExpansions);
+    setVal('sceneText',randomChoice(sceneExpansions[randomChoice(keys)]));filled++;
+  }
+  let dialogue=val('dialogueText');
+  if(!dialogue){
+    let dlgs=["也许，这就是人生吧","我从未放弃过希望","你还好吗？","一切都会好起来的","我在等一个人","时间过得真快","这里真美","谢谢你一直陪着我","我想回家了","明天会更好"];
+    setVal('dialogueText',randomChoice(dlgs));filled++;
+  }
+  generatePrompt();
+  setStatus(`智能填充完成！已自动填充 ${filled} 个字段`);
+}
+
+function optimizePrompt(){
+  let originalSubject=val('subjectText');
+  let originalAction=val('actionText');
+  let originalScene=val('sceneText');
+  let optimizedSubject=originalSubject;
+  let optimizedAction=originalAction;
+  let optimizedScene=originalScene;
+
+  for(let key in subjectExpansions){
+    if(originalSubject.indexOf(key)!==-1&&originalSubject.length<20){
+      optimizedSubject=randomChoice(subjectExpansions[key]);break;
+    }
+  }
+  for(let key in actionExpansions){
+    if(originalAction.indexOf(key)!==-1&&originalAction.length<20){
+      optimizedAction=randomChoice(actionExpansions[key]);break;
+    }
+  }
+  for(let key in sceneExpansions){
+    if(originalScene.indexOf(key)!==-1&&originalScene.length<20){
+      optimizedScene=randomChoice(sceneExpansions[key]);break;
+    }
+  }
+  if(optimizedSubject!==originalSubject) setVal('subjectText',optimizedSubject);
+  if(optimizedAction!==originalAction) setVal('actionText',optimizedAction);
+  if(optimizedScene!==originalScene) setVal('sceneText',optimizedScene);
+
+  let styleCustom=val('styleCustom');
+  let lightCustom=val('lightCustom');
+  let styleKeywords=["电影","写实","动画","赛博","复古","日系","恐怖","浪漫","科幻","奇幻","冒险","温馨","史诗","极简","抽象","水墨"];
+  for(let kw of styleKeywords){
+    if((originalSubject+originalAction+originalScene).indexOf(kw)!==-1&&!styleCustom){
+      if(styleExpansions[kw]){setVal('styleCustom',randomChoice(styleExpansions[kw]));}
+      break;
+    }
+  }
+  let lightKeywords=["阳光","月光","霓虹","烛光","灯光","柔光","硬光","轮廓"];
+  for(let kw of lightKeywords){
+    if((originalSubject+originalAction+originalScene).indexOf(kw)!==-1&&!lightCustom){
+      if(lightingExpansions[kw]){setVal('lightCustom',randomChoice(lightingExpansions[kw]));}
+      break;
+    }
+  }
+  generatePrompt();
+  setStatus('提示词智能优化完成！');
+}
+
+/* ============================================================
+   剧本分析
+   ============================================================ */
+function parseScriptScenes(script){
+  let scenes=[];
+  let current={title:'',location:'',time:'',characters:[],action:'',dialogue:'',atmosphere:''};
+  let charPattern=/^([\u4e00-\u9fa5a-zA-Z]+)[：:]/;
+  let lines=script.split('\n');
+  for(let line of lines){
+    line=line.trim();
+    if(!line) continue;
+    if(line.startsWith('场景')||line.startsWith('第')){
+      if(current.action||current.characters.length) scenes.push(current);
+      current={title:line,location:'',time:'',characters:[],action:'',dialogue:'',atmosphere:''};
+    }else if(line.indexOf('时间：')!==-1||line.indexOf('时间:')!==-1){
+      current.time=line.replace('时间：','').replace('时间:','').trim();
+    }else if(line.indexOf('地点：')!==-1||line.indexOf('地点:')!==-1){
+      current.location=line.replace('地点：','').replace('地点:','').trim();
+    }else{
+      let m=line.match(charPattern);
+      if(m){
+        let character=m[1];
+        if(current.characters.indexOf(character)===-1) current.characters.push(character);
+        let dialogue=line.slice(m[0].length).trim();
+        if(dialogue) current.dialogue+=dialogue+' ';
+      }else{
+        current.action+=line+' ';
+      }
+    }
+  }
+  if(current.action||current.characters.length) scenes.push(current);
+
+  let atmosphereKeywords={
+    '雨':['雨夜氛围','潮湿','忧郁'],'夜':['夜晚','神秘','昏暗'],'阳光':['明亮','温暖','希望'],
+    '悲伤':['悲伤','忧郁','压抑'],'快乐':['快乐','明亮','欢快'],'紧张':['紧张','悬疑','紧迫'],
+    '温馨':['温馨','温暖','舒适'],'神秘':['神秘','诡异','悬疑'],'浪漫':['浪漫','温馨','甜蜜'],'恐怖':['恐怖','惊悚','紧张']
+  };
+  for(let scene of scenes){
+    let text=scene.action+scene.dialogue;
+    for(let kw in atmosphereKeywords){
+      if(text.indexOf(kw)!==-1){scene.atmosphere=atmosphereKeywords[kw][0];break;}
+    }
+    if(!scene.atmosphere) scene.atmosphere='自然氛围';
+  }
+  return scenes;
+}
+
+function generateShotPrompts(scene,sceneIdx){
+  let shots=[];
+  let location=scene.location||'未知地点';
+  let characters=scene.characters.length?scene.characters.join(', '):'人物';
+  let action=scene.action?scene.action.slice(0,30):'动作';
+  let atmosphere=scene.atmosphere;
+  shots.push(`【全景】${location}，${atmosphere}，${characters}出现在画面中，建立场景氛围`);
+  shots.push(`【中景】${characters}，${action}，展现人物动作和表情`);
+  if(scene.characters.length) shots.push(`【近景】${scene.characters[0]}，面部表情特写，${atmosphere}氛围`);
+  if(scene.dialogue) shots.push(`【对话镜头】${characters}，${scene.dialogue.slice(0,20)}，自然对话表情`);
+  return shots;
+}
+
+function analyzeScript(){
+  let script=val('scriptText');
+  if(!script){setStatus('请输入剧本内容');return;}
+  let scenes=parseScriptScenes(script);
+  let resultText='【剧本分析报告】\n\n';
+  resultText+=`共识别 ${scenes.length} 个场景\n\n`;
+  scenes.forEach((scene,idx)=>{
+    resultText+=`${'='.repeat(50)}\n`;
+    resultText+=`🎬 场景 ${idx+1}: ${scene.title}\n`;
+    resultText+=`📍 地点: ${scene.location}\n`;
+    resultText+=`🕐 时间: ${scene.time}\n`;
+    resultText+=`👥 角色: ${scene.characters.join(', ')}\n`;
+    resultText+=`🎭 动作: ${scene.action}\n`;
+    resultText+=`💬 对话: ${scene.dialogue}\n`;
+    resultText+=`🎨 氛围: ${scene.atmosphere}\n`;
+    let shotPrompts=generateShotPrompts(scene,idx);
+    resultText+=`\n📷 分镜提示词:\n`;
+    shotPrompts.forEach((shot,i)=>{resultText+=`   镜头${i+1}: ${shot}\n`;});
+  });
+  $('storyboardText').value=resultText;
+  window._analyzedStoryboard=scenes;
+  setStatus(`剧本分析完成，共 ${scenes.length} 个场景`);
+}
+
+function applyScriptToScene(){
+  let scenes=window._analyzedStoryboard;
+  if(!scenes||!scenes.length){setStatus('请先分析剧本');return;}
+  let first=scenes[0];
+  if(first.characters.length) setVal('subjectText',first.characters.join(', '));
+  if(first.action) setVal('actionText',first.action.slice(0,50));
+  let sceneDesc=[first.location,first.time,first.atmosphere].filter(x=>x).join('，');
+  if(sceneDesc) setVal('sceneText',sceneDesc);
+  if(first.dialogue) setVal('dialogueText',first.dialogue.slice(0,30));
+  generatePrompt();
+  setStatus('已将剧本分析结果应用到场景');
+  switchTab('subject');
+}
+
+/* ============================================================
+   状态栏
+   ============================================================ */
+function setStatus(msg){
+  $('statusText').textContent=msg;
+  let dot=$('statusDot');
+  dot.style.background='var(--success)';
+  setTimeout(()=>{dot.style.background='var(--success)';},100);
+}
+
+/* ============================================================
+   启动
+   ============================================================ */
+/* ============================================================
+   DeepSeek AI 集成 - 一句话生成提示词
+   ============================================================ */
+let _aiResultData = null; // 保存 AI 返回的结构化数据
+
+/* 构建系统提示词 - 注入程序全部专业知识 */
+function buildSystemPrompt(){
+  let p = '你是一个专业的 Seedance 2.0 AI 视频提示词工程师。用户会用一句话描述创意，你需要分析并生成结构化的提示词参数。\n\n';
+
+  // === Seedance 2.0 平台规格 ===
+  p += '## Seedance 2.0 平台规格\n';
+  p += '- 生成时长：4-15秒，可自由选择\n- 分辨率：支持2K输出\n- 声音输出：自带音效/配乐\n';
+  p += '- 不支持上传含有写实真人脸部的素材\n- 单次生成上限15秒，超长视频需分段生成+视频延长拼接\n\n';
+
+  // === 扩展库知识 ===
+  p += '## 专业扩展库（匹配关键词后追加对应描述）\n\n';
+
+  p += '### 主体扩展库（subject字段可参考这些描述）\n';
+  for(let k in subjectExpansions){
+    p += `- "${k}"：${subjectExpansions[k][0]}\n`;
+  }
+
+  p += '\n### 动作扩展库（action字段可参考这些描述）\n';
+  let actKeys = Object.keys(actionExpansions);
+  for(let i=0;i<actKeys.length;i++){
+    p += `- "${actKeys[i]}"：${actionExpansions[actKeys[i]][0]}\n`;
+  }
+
+  p += '\n### 场景扩展库（scene字段可参考这些描述）\n';
+  for(let k in sceneExpansions){
+    p += `- "${k}"：${sceneExpansions[k][0]}\n`;
+  }
+
+  p += '\n### 场景互动扩展库（scene字段可追加互动描述）\n';
+  for(let k in sceneInteractionExpansions){
+    p += `- "${k}"：${sceneInteractionExpansions[k][0]}\n`;
+  }
+
+  p += '\n### 风格扩展库（style_custom字段参考这些描述）\n';
+  for(let k in styleExpansions){
+    p += `- "${k}"：${styleExpansions[k]}\n`;
+  }
+
+  p += '\n### 灯光扩展库（light_custom字段参考这些描述）\n';
+  for(let k in lightingExpansions){
+    p += `- "${k}"：${lightingExpansions[k]}\n`;
+  }
+
+  p += '\n### 景别扩展库（shot_scale选择时参考）\n';
+  for(let k in cameraExpansions){
+    p += `- "${k}"：${cameraExpansions[k][0]}\n`;
+  }
+
+  p += '\n### 运镜扩展库（camera_move选择时参考）\n';
+  for(let k in cameraMoveExpansions){
+    p += `- "${k}"：${cameraMoveExpansions[k][0]}\n`;
+  }
+
+  p += '\n### 角度扩展库（camera_angle选择时参考）\n';
+  for(let k in cameraAngleExpansions){
+    p += `- "${k}"：${cameraAngleExpansions[k][0]}\n`;
+  }
+
+  p += '\n### 镜头扩展库（lens选择时参考）\n';
+  for(let k in lensExpansions){
+    p += `- "${k}"：${lensExpansions[k][0]}\n`;
+  }
+
+  // === 时长策略 ===
+  p += '\n### 时长扩展策略\n';
+  p += '- 5秒：聚焦特写，简洁场景，瞬间的动作，背景虚化\n';
+  p += '- 10秒：中景展现，完整动作序列，中等场景，背景交代清楚\n';
+  p += '- 15秒：全景展现，复杂动作序列（起承转合），宏大场景，多层次氛围\n';
+  p += '- auto：根据内容自动调整\n\n';
+
+  // === 情绪预设映射 ===
+  p += '## 情绪预设灯光映射表\n';
+  for(let k in moodPresets){
+    let m = moodPresets[k];
+    p += `- "${k}"：光源=${m.source}，色温=${m.color}，氛围=${m.atmosphere}，自定义灯光=${m.custom}\n`;
+  }
+
+  // === 场景模板 ===
+  p += '\n## 场景模板结构（根据用户创意选择最匹配的模板思路）\n';
+  let tplKeys = Object.keys(sceneTemplates).filter(k=>k!=='自定义');
+  for(let k of tplKeys){
+    p += `### ${k}\n${sceneTemplates[k]}\n\n`;
+  }
+
+  // === 时间戳分镜法 ===
+  p += '## 时间戳分镜法（15秒视频最常用的高级技巧）\n';
+  p += '0-3秒：开场镜头，建立场景\n3-7秒：发展，引入主体/冲突\n7-11秒：高潮，核心动作/情感爆发\n11-13秒：转折/过渡\n13-15秒：结尾/落版\n\n';
+
+  // === 参数选项 ===
+  p += '## 输出参数选项\n';
+  p += '- mode: T2V / I2V\n';
+  p += '- duration: auto / 5秒 / 10秒 / 15秒\n';
+  p += '- ratio: 16:9 / 9:16 / 1:1 / 2.35:1\n';
+  p += '- quality: Standard / High / Ultra\n';
+  p += '- mood: 自然/温馨/紧张/悬疑/欢快/忧伤/史诗/治愈/惊悚\n';
+  p += '- rhythm: 极慢/缓慢/中速/快速/急促\n';
+  p += '- quality_level: 专业级/电影级/电视级/广告级/MV级\n';
+  p += '- medium: 真人实拍/3D动画/2D动画/水墨动画/油画风格/水彩风格\n';
+  p += '- surface: 自然质感/胶片质感/数码质感/油画质感/水彩质感/粗糙质感\n';
+  p += '- palette: 自然色彩/暖色调/冷色调/高饱和/低饱和/黑白/复古色调\n';
+  p += '- render: 电影级/纪录片/广告片/MV风格/新闻纪实\n';
+  p += '- shot_scale: 中景/大远景/远景/全景/近景/特写/大特写\n';
+  p += '- camera_move: 缓慢推镜/缓慢拉镜/横向平移/垂直摇镜/环绕镜头/升降镜头/跟随拍摄/手持拍摄/无人机航拍/微距推进/固定镜头\n';
+  p += '- camera_angle: 平视/仰视/俯视/倾斜角度/过肩视角/第一人称视角\n';
+  p += '- lens: 不指定/24mm 广角/35mm 自然视角/50mm 标准镜头/85mm 人像/微距镜头/长焦\n';
+  p += '- light_source: 自然光/窗户光/霓虹灯/烛光/月光/舞台光/柔光/硬光/轮廓光/冷光/暖光\n';
+  p += '- color_temp: 自然中性/温暖钨丝灯/冷色调/黄金时刻/霓虹赛博/日光灯\n';
+  p += '- atmosphere: 无/薄雾/浓雾/雨丝/雪花/烟雾/光斑/尘埃\n';
+  p += '- music: 无/轻柔/紧张/激昂/悬疑/欢快/忧伤/史诗/电子/民谣\n';
+  p += '- ambient: 自然环境音/街道噪音/自然声/室内安静/城市喧嚣/海浪声/雨声/风声\n\n';
+
+  // === JSON 输出格式 ===
+  p += '## 输出格式（严格JSON，不要输出其他内容）\n';
+  p += '{\n';
+  p += '  "mode": "T2V或I2V",\n';
+  p += '  "duration": "auto/5秒/10秒/15秒",\n';
+  p += '  "ratio": "16:9/9:16/1:1/2.35:1",\n';
+  p += '  "quality": "Standard/High/Ultra",\n';
+  p += '  "mood": "情绪",\n';
+  p += '  "rhythm": "节奏",\n';
+  p += '  "quality_level": "制作水平",\n';
+  p += '  "medium": "媒介",\n';
+  p += '  "surface": "质感",\n';
+  p += '  "palette": "色调",\n';
+  p += '  "render": "呈现",\n';
+  p += '  "subject": "主体描述（20-50字，参考扩展库写出有画面感的描述）",\n';
+  p += '  "action": "动作描述（20-50字，参考动作扩展库写出细腻的动作）",\n';
+  p += '  "scene": "场景描述（20-50字，参考场景扩展库和场景互动扩展库）",\n';
+  p += '  "dialogue": "台词（有对白时填，无则留空）",\n';
+  p += '  "shot_scale": "景别",\n';
+  p += '  "camera_move": "运镜",\n';
+  p += '  "camera_angle": "角度",\n';
+  p += '  "lens": "镜头",\n';
+  p += '  "light_source": "光源",\n';
+  p += '  "color_temp": "色温",\n';
+  p += '  "atmosphere": "氛围",\n';
+  p += '  "music": "音乐",\n';
+  p += '  "ambient": "环境音",\n';
+  p += '  "style_custom": "自定义风格关键词（英文+中文，参考风格扩展库）",\n';
+  p += '  "light_custom": "自定义灯光描述（参考灯光扩展库）",\n';
+  p += '  "constraint": "约束条件",\n';
+  p += '  "ban_text": "禁止项",\n';
+  p += '  "negative": "负面提示词",\n';
+  p += '  "prefix": "前缀（如有模板需求）",\n';
+  p += '  "analysis": "设计思路分析（50-100字）"\n';
+  p += '}\n\n';
+
+  // === 规则 ===
+  p += '## 生成规则\n';
+  p += '1. 根据用户描述智能选择每个参数，参考上方扩展库写出专业的描述\n';
+  p += '2. subject/action/scene 要写得具体生动有画面感，参考扩展库中的专业描述风格\n';
+  p += '3. 如果用户提到风格关键词（赛博朋克/水墨/日系等），对应设置 medium/palette/render，并参考情绪预设映射表设置灯光\n';
+  p += '4. 如果用户提到时长和比例直接使用；未提及则根据内容智能推荐（叙事类推荐15秒，产品类推荐10秒，社交媒体推荐5秒）\n';
+  p += '5. 根据创意内容自动匹配最接近的场景模板思路来组织 subject/action/scene\n';
+  p += '6. dialogue 仅在有明确对话需求时填写\n';
+  p += '7. ban_text 默认填"任何文字、字幕、LOGO或水印"\n';
+  p += '8. negative 默认填"变形, 扭曲, 模糊, 低质量, 多余的手指, 畸形"\n';
+  p += '9. style_custom 参考风格扩展库写出英文+中文关键词\n';
+  p += '10. light_custom 参考灯光扩展库写出专业灯光描述\n';
+  p += '11. analysis 简要说明设计思路和参数选择理由';
+
+  return p;
+}
+
+function getApiKey(){
+  return localStorage.getItem('deepseek_api_key') || '';
+}
+function saveApiKey(){
+  let key = $('apiKey').value.trim();
+  if(!key){ setStatus('请输入 API Key'); return; }
+  localStorage.setItem('deepseek_api_key', key);
+  $('apiKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已保存到浏览器本地</span> · <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+  setStatus('API Key 已保存');
+}
+function toggleApiKeyVisibility(){
+  let inp = $('apiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+function saveModelChoice(){
+  localStorage.setItem('deepseek_model', $('aiModel').value);
+}
+
+function fillExample(){
+  let examples = [
+    "赛博朋克城市夜景，一个穿风衣的男人在雨中走过霓虹灯街道，15秒，横屏，电影级质感",
+    "一个可爱的小女孩在花园里追蝴蝶，温馨治愈风格，5秒，竖屏",
+    "古风武侠打斗场景，两位侠客在枫叶林中对决，水墨风格，10秒，横屏",
+    "产品广告：一款银色手表的特写展示，高端商务风格，旋转展示，10秒",
+    "太空探索者走出空间站，仰望星空和地球，史诗科幻风格，15秒，2.35:1宽屏",
+    "日系校园午后，教室里女生安静地写字，阳光透过窗帘洒落，唯美青春，15秒"
+  ];
+  $('aiInput').value = examples[Math.floor(Math.random() * examples.length)];
+}
+
+async function aiGenerate(){
+  let userInput = $('aiInput').value.trim();
+  if(!userInput){ setStatus('请输入创意想法'); return; }
+  
+  let apiKey = getApiKey();
+  if(!apiKey){
+    // 检查输入框里是否有
+    apiKey = $('apiKey').value.trim();
+    if(apiKey){
+      localStorage.setItem('deepseek_api_key', apiKey);
+    } else {
+      setStatus('请先输入 DeepSeek API Key');
+      $('apiKey').focus();
+      return;
+    }
+  }
+  
+  let model = $('aiModel').value;
+  let btn = $('aiGenerateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ AI 思考中...';
+  $('aiStatus').style.display = 'block';
+  $('aiResult').style.display = 'none';
+  $('aiSpinner').style.display = 'block';
+  $('aiStatusText').textContent = 'AI 正在分析你的创意并生成结构化提示词...';
+  
+  // 动态构建系统提示词，注入程序全部专业知识
+  let systemPrompt = buildSystemPrompt();
+
+  let userPrompt = `用户创意：${userInput}\n\n请分析并生成结构化提示词参数（JSON格式）。`;
+
+  try {
+    let response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 2000,
+        temperature: 0.7
+      })
+    });
+
+    if(!response.ok){
+      let errData = await response.json().catch(() => ({}));
+      let errMsg = errData.error ? errData.error.message : ('HTTP ' + response.status);
+      if(response.status === 401) errMsg = 'API Key 无效，请检查后重新输入';
+      if(response.status === 429) errMsg = '请求过于频繁，请稍后再试';
+      throw new Error(errMsg);
+    }
+
+    let data = await response.json();
+    let content = data.choices[0].message.content;
+    let parsed = JSON.parse(content);
+    _aiResultData = parsed;
+
+    // 显示分析结果
+    let analysisHTML = formatAIResult(parsed);
+    $('aiAnalysisBox').innerHTML = analysisHTML;
+    $('aiStatusText').textContent = '✅ AI 分析完成！点击下方按钮应用到所有标签页';
+    $('aiStatus').querySelector('div').classList.add('ai-success');
+    $('aiResult').style.display = 'block';
+    setStatus('AI 生成完成，点击「应用到所有标签页」');
+
+  } catch(err) {
+    $('aiSpinner').style.display = 'none';
+    $('aiStatusText').textContent = '❌ ' + err.message;
+    $('aiStatus').querySelector('div').classList.add('ai-error');
+    setStatus('AI 生成失败: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚀 AI 生成提示词';
+  }
+}
+
+function formatAIResult(d){
+  let html = '';
+  html += '<div style="margin-bottom:10px;color:var(--primary);font-weight:700">💡 设计思路</div>';
+  html += '<div style="margin-bottom:14px">' + (d.analysis || '') + '</div>';
+  html += '<div style="margin-bottom:10px;color:var(--primary);font-weight:700">📋 参数预览</div>';
+  html += '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+  let fields = [
+    ['模式/时长/比例/质量', [d.mode, d.duration, d.ratio, d.quality].join(' | ')],
+    ['情绪/节奏/制作水平', [d.mood, d.rhythm, d.quality_level].join(' | ')],
+    ['媒介/质感/色调/呈现', [d.medium, d.surface, d.palette, d.render].join(' | ')],
+    ['主体', d.subject],
+    ['动作', d.action],
+    ['场景', d.scene],
+    ['台词', d.dialogue || '（无）'],
+    ['镜头', [d.shot_scale, d.camera_move, d.camera_angle, d.lens].join(' | ')],
+    ['灯光', [d.light_source, d.color_temp, d.atmosphere].join(' | ')],
+    ['音乐/环境音', [d.music, d.ambient].join(' | ')],
+    ['风格自定义', d.style_custom || '（无）'],
+    ['禁止项', d.ban_text || '（无）']
+  ];
+  for(let [k, v] of fields){
+    html += '<tr><td style="padding:4px 8px;color:var(--text-light);white-space:nowrap;vertical-align:top;width:130px">' + k + '</td>';
+    html += '<td style="padding:4px 8px">' + (v || '—') + '</td></tr>';
+  }
+  html += '</table>';
+  return html;
+}
+
+function applyAIResult(){
+  let d = _aiResultData;
+  if(!d){ setStatus('请先生成 AI 结果'); return; }
+  
+  // 基本设置
+  if(d.mode) selectRadio('mode', d.mode);
+  if(d.duration) setVal('duration', d.duration);
+  if(d.ratio) setVal('ratio', d.ratio);
+  if(d.quality) setVal('quality', d.quality);
+  if(d.mood) setVal('mood', d.mood);
+  if(d.rhythm) setVal('rhythm', d.rhythm);
+  if(d.quality_level) setVal('qualityLevel', d.quality_level);
+  
+  // 剧本分析 / 主体内容
+  if(d.prefix) setVal('prefixText', d.prefix);
+  if(d.subject) setVal('subjectText', d.subject);
+  if(d.action) setVal('actionText', d.action);
+  if(d.scene) setVal('sceneText', d.scene);
+  if(d.dialogue) setVal('dialogueText', d.dialogue);
+  
+  // 视觉风格
+  if(d.medium) setVal('medium', d.medium);
+  if(d.surface) setVal('surface', d.surface);
+  if(d.palette) setVal('palette', d.palette);
+  if(d.render) setVal('render', d.render);
+  if(d.style_custom) setVal('styleCustom', d.style_custom);
+  
+  // 镜头设计
+  if(d.shot_scale) setVal('shotScale', d.shot_scale);
+  if(d.camera_move) setVal('cameraMove', d.camera_move);
+  if(d.camera_angle) setVal('cameraAngle', d.camera_angle);
+  if(d.lens) setVal('lens', d.lens);
+  
+  // 灯光氛围
+  if(d.light_source) setVal('lightSource', d.light_source);
+  if(d.color_temp) setVal('colorTemp', d.color_temp);
+  if(d.atmosphere) setVal('atmosphere', d.atmosphere);
+  if(d.light_custom) setVal('lightCustom', d.light_custom);
+  
+  // 音效设计
+  if(d.music) setVal('music', d.music);
+  if(d.ambient) setVal('ambient', d.ambient);
+  
+  // 高级设置
+  if(d.constraint) setVal('constraintText', d.constraint);
+  if(d.ban_text) setVal('banText', d.ban_text);
+  if(d.negative) setVal('negativeText', d.negative);
+  
+  // 生成提示词
+  generatePrompt();
+  onDurationChange();
+  setStatus('✅ AI 结果已应用到所有标签页！切换到「生成结果」查看');
+  switchTab('result');
+}
+
+function regenerateAI(){
+  $('aiResult').style.display = 'none';
+  $('aiStatus').style.display = 'none';
+  aiGenerate();
+}
+
+function selectRadio(name, value){
+  let radios = document.querySelectorAll('input[name="' + name + '"]');
+  for(let r of radios){
+    if(r.value === value){ r.checked = true; break; }
+  }
+}
+
+// 初始化时加载保存的 API Key 和模型
+function initAISettings(){
+  let savedKey = getApiKey();
+  if(savedKey){
+    $('apiKey').value = savedKey;
+    $('apiKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已加载</span> · <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+  }
+  let savedModel = localStorage.getItem('deepseek_model');
+  if(savedModel){
+    $('aiModel').value = savedModel;
+  }
+}
+
+window.addEventListener('DOMContentLoaded',initUI);
+</script>
+</body>
+</html>
