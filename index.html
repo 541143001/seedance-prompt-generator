@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seedance 2.0 提示词生成器 v2.2</title>
+<title>Seedance 2.0 提示词生成器 v2.3</title>
 <style>
 :root{
   --primary:#6366F1;--primary-dark:#4F46E5;--primary-light:#818CF8;
@@ -141,7 +141,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
 <div class="header">
   <h1>🎬 Seedance 2.0 提示词生成器</h1>
-  <span class="ver">v2.2</span>
+  <span class="ver">v2.3</span>
   <div class="spacer"></div>
   <span class="badge">🤖 DeepSeek AI 驱动</span>
 </div>
@@ -165,11 +165,11 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
   <div class="content" id="content">
 
-    <!-- 0. AI 生成 -->
+    <!-- 0. AI 优化 -->
     <div class="panel active" id="panel-ai">
       <div class="card">
-        <div class="card-title"><span class="ti">🤖</span>DeepSeek AI 智能提示词生成</div>
-        <div class="card-desc">输入你的剧本或创意想法，AI 直接生成专业的 Seedance 2.0 完整提示词，保留并增强你的所有细节。</div>
+        <div class="card-title"><span class="ti">🤖</span>DeepSeek AI 提示词优化</div>
+        <div class="card-desc">输入你的剧本或创意，AI 会在保留你所有细节的基础上优化为专业的 Seedance 2.0 提示词。</div>
 
         <div class="subsection">
           <label class="sub-title">🔑 API Key 设置</label>
@@ -194,31 +194,71 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
         </div>
 
         <div class="subsection">
-          <label class="sub-title">💡 输入你的剧本或创意想法</label>
-          <textarea id="aiInput" rows="6" placeholder="输入你的剧本、创意想法或分镜描述，越详细越好。AI 会保留你的所有细节并增强为专业提示词。&#10;&#10;例如：&#10;一只吊睛白额猛虎妖被五花大绑在树上，皮毛油亮，眼神充满请求。画外音A（不耐烦）：你到底咬不咬？画外音B（突然）：等等，绳结好像松了..." style="font-size:14px;min-height:120px"></textarea>
+          <label class="sub-title">⚙️ 视频参数（可选）</label>
+          <div class="form-row" style="gap:8px">
+            <select id="aiRatio" style="flex:1">
+              <option value="">画幅比例</option>
+              <option value="16:9">16:9 横屏</option>
+              <option value="9:16">9:16 竖屏</option>
+              <option value="1:1">1:1 方形</option>
+              <option value="4:3">4:3</option>
+            </select>
+            <select id="aiDuration" style="flex:1">
+              <option value="">时长</option>
+              <option value="5">5 秒</option>
+              <option value="10">10 秒</option>
+              <option value="15">15 秒</option>
+            </select>
+            <select id="aiQuality" style="flex:1">
+              <option value="">清晰度</option>
+              <option value="480P">480P</option>
+              <option value="720P">720P</option>
+              <option value="1080P">1080P</option>
+              <option value="2K">2K</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <label class="sub-title">💡 输入你的剧本或创意</label>
+          <textarea id="aiInput" rows="6" placeholder="输入你的剧本、创意想法或分镜描述，越详细越好。AI 会保留你的所有细节并优化为专业提示词。&#10;&#10;例如：&#10;一只吊睛白额猛虎妖被五花大绑在树上，皮毛油亮，眼神充满请求。画外音A（不耐烦）：你到底咬不咬？画外音B（突然）：等等，绳结好像松了..." style="font-size:14px;min-height:120px"></textarea>
+        </div>
+
+        <div class="subsection">
+          <label class="sub-title">🔧 优化方向（可选）</label>
+          <textarea id="aiInstruction" rows="2" placeholder='直接点击"优化"即可自动增强，或在此输入优化方向（如：更紧张的氛围、增加特写镜头、加快节奏等）' style="font-size:13px;min-height:40px;resize:vertical"></textarea>
         </div>
 
         <div class="btn-row" style="margin-bottom:14px">
-          <button class="btn btn-primary" onclick="aiGenerate()" id="aiGenerateBtn">🚀 AI 生成提示词</button>
+          <button class="btn btn-primary" onclick="aiOptimize()" id="aiOptimizeBtn">✨ 优化提示词</button>
           <button class="btn btn-ghost" onclick="fillExample()">📝 填充示例</button>
         </div>
 
         <div id="aiStatus" style="display:none;margin-bottom:14px">
           <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg-light);border-radius:var(--radius-sm);border:1px solid var(--border)">
             <div class="ai-spinner" id="aiSpinner"></div>
-            <span id="aiStatusText" style="font-size:13px;color:var(--text-light)">AI 正在生成专业提示词...</span>
+            <span id="aiStatusText" style="font-size:13px;color:var(--text-light)">AI 正在优化提示词...</span>
+            <span id="aiTimer" style="margin-left:auto;font-size:12px;color:var(--text-light);font-variant-numeric:tabular-nums"></span>
           </div>
         </div>
 
         <div id="aiResult" style="display:none">
+          <div id="aiDiffBar" style="display:none;margin-bottom:12px;padding:8px 14px;background:var(--bg-light);border-radius:var(--radius-sm);border:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            <span style="font-size:13px;color:var(--text-light)">✅ 优化完成</span>
+            <button class="btn btn-sm btn-ghost" onclick="toggleDiff()" id="diffToggleBtn">📊 查看对比</button>
+            <button class="btn btn-sm btn-ghost" onclick="undoOptimize()">↩️ 撤销</button>
+          </div>
+          <div id="aiDiffView" style="display:none;margin-bottom:14px">
+            <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;max-height:300px;overflow-y:auto;font-size:13px;line-height:1.8;background:var(--bg-light)" id="aiDiffContent"></div>
+          </div>
           <div class="subsection">
-            <label class="sub-title">📋 AI 生成的完整提示词</label>
+            <label class="sub-title">📋 优化后的提示词</label>
             <textarea id="aiPromptOutput" rows="12" style="font-size:13px;line-height:1.8;min-height:200px;background:var(--bg-light);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;resize:vertical"></textarea>
           </div>
           <div class="btn-row">
             <button class="btn btn-success" onclick="copyAIPrompt()">📋 复制提示词</button>
             <button class="btn btn-secondary" onclick="sendToResult()">📤 发送到生成结果</button>
-            <button class="btn btn-ghost" onclick="regenerateAI()">🔄 重新生成</button>
+            <button class="btn btn-ghost" onclick="aiOptimizeAgain()">🔄 再次优化</button>
           </div>
         </div>
       </div>
@@ -226,15 +266,22 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
       <div class="card">
         <div class="card-title"><span class="ti">📖</span>使用说明</div>
         <div class="hint" style="line-height:1.8">
-          <strong>三步使用 AI 生成：</strong><br>
+          <strong>使用流程：</strong><br>
           1. 输入你的 DeepSeek API Key（<a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--primary)">获取地址</a>）<br>
-          2. 输入你的剧本或创意想法（可以是一句话，也可以是完整剧本，越详细 AI 增强越好）<br>
-          3. 点击「AI 生成提示词」，AI 会直接输出一段完整的、可直接使用的专业提示词<br><br>
-          <strong>AI 会做什么：</strong><br>
+          2. 可选：设置视频参数（画幅、时长、清晰度）<br>
+          3. 输入你的剧本或创意想法<br>
+          4. 可选：输入优化方向（如"更紧张""加快节奏"），或直接点击优化<br>
+          5. 点击「优化提示词」，AI 会保留你的所有细节并增强为专业提示词<br><br>
+          <strong>AI 优化会做什么：</strong><br>
           • 保留你剧本中的所有细节和戏剧元素，不会缩减<br>
-          • 自动补充镜头语言、灯光氛围、音效设计等专业描述<br>
-          • 参考程序内置的 181 个专业扩展库关键词增强画面感<br>
-          • 输出一段流畅的叙事段落，可直接复制粘贴到即梦平台使用<br><br>
+          • 根据视频参数自动适配画幅、时长和清晰度<br>
+          • 补充镜头运动、景别角度、光线方向和结束姿态<br>
+          • 添加专业约束（保持单一场景、主体一致、动作连续）<br>
+          • 输出一段流畅的叙事段落，可直接复制到即梦平台使用<br><br>
+          <strong>优化后可以：</strong><br>
+          • 点击「查看对比」查看优化前后的差异<br>
+          • 点击「撤销」恢复原始内容<br>
+          • 点击「再次优化」在优化结果基础上继续优化<br><br>
           <strong>示例输入：</strong><br>
           • 赛博朋克城市夜景，一个穿风衣的男人在雨中走过霓虹灯街道，15秒，横屏<br>
           • 一只白虎被绑在树上，画外音A不耐烦地说"你到底咬不咬"，画外音B突然说"绳结松了"<br>
@@ -1729,19 +1776,35 @@ function setStatus(msg){
    启动
    ============================================================ */
 /* ============================================================
-   DeepSeek AI 集成 - 直接生成完整提示词
+   DeepSeek AI 集成 - 提示词优化（参考暖梦 AIGC 优化器设计）
    ============================================================ */
-let _aiPromptText = ''; // 保存 AI 生成的提示词文本
+let _aiOriginalText = '';   // 保存原始输入
+let _aiOptimizedText = '';  // 保存优化后的文本
+let _aiTimerInterval = null; // 计时器
+let _aiDiffVisible = false;  // 对比视图是否展开
 
-/* 构建系统提示词 - 注入程序全部专业知识，要求直接输出完整提示词 */
+/* 构建视频规格字符串 */
+function buildVideoSpec(){
+  let parts = [];
+  let ratio = $('aiRatio') ? $('aiRatio').value : '';
+  let duration = $('aiDuration') ? $('aiDuration').value : '';
+  let quality = $('aiQuality') ? $('aiQuality').value : '';
+  if(ratio) parts.push(ratio + ' 画幅');
+  if(quality) parts.push(quality + ' 清晰度');
+  if(duration) parts.push(duration + ' 秒');
+  return parts.join('，');
+}
+
+/* 构建系统提示词 - 优化器模式 */
 function buildSystemPrompt(){
-  let p = '你是一个专业的 Seedance 2.0 AI 视频提示词工程师。用户会输入剧本或创意想法，你需要直接生成一段完整的、专业的、可直接使用的 Seedance 2.0 视频提示词。\n\n';
+  let p = '你是 Seedance 2.0 视频提示词优化引擎。用户会提供一段剧本或创意文本，你需要在保留用户所有原始细节的基础上，将其优化为一段专业、可直接使用的 Seedance 2.0 视频提示词。\n\n';
 
-  p += '## 核心原则\n';
-  p += '1. **保留用户的所有细节**：不要缩减用户的剧本，用户提到的每个角色、动作、对话、场景都必须保留在最终提示词中\n';
-  p += '2. **增强而非替代**：在用户原有内容基础上，补充镜头语言、灯光氛围、音效设计、风格描述等专业元素\n';
-  p += '3. **输出完整提示词文本**：直接输出一段可复制粘贴到即梦平台使用的中文提示词，不要输出参数表格、JSON或分析说明\n';
-  p += '4. **画面感优先**：描述要具体、有画面感，参考下方扩展库中的专业描述风格\n\n';
+  p += '## 优化原则\n';
+  p += '1. **保留所有原始内容**：用户提到的每个角色、动作、对话、场景都必须完整保留，绝不能缩减或遗漏\n';
+  p += '2. **增强而非替代**：在用户原有内容基础上补充镜头运动、景别角度、光线方向、质感细节和结束姿态\n';
+  p += '3. **适配视频参数**：如果用户指定了画幅、时长、清晰度，需自然融入提示词开头\n';
+  p += '4. **单一场景连续性**：保持单一场景、同一主体和动作连续性，不要大幅摇动、无故切换场景或改变人物身份\n';
+  p += '5. **画面感优先**：描述要具体、有画面感，参考下方扩展库中的专业描述风格\n\n';
 
   // === Seedance 2.0 平台规格 ===
   p += '## Seedance 2.0 平台规格\n';
@@ -1812,21 +1875,20 @@ function buildSystemPrompt(){
   // === 输出格式 ===
   p += '\n## 输出格式要求（极其重要）\n';
   p += '输出一段**连续流畅的叙事段落**，像电影导演口述画面一样自然连贯。\n';
-  p += '所有要素融合在一个段落中，用逗号和句号连接，**绝不要分点、分行、分时间段**。\n\n';
-  p += '段落中需自然包含：风格定调 + 主体外貌细节 + 场景环境 + 动作过程 + 镜头语言 + 灯光氛围 + 台词对白 + 音效。\n\n';
+  p += '所有要素融合在一个段落中，用逗号和句号连接，**绝不要分点、分行、分时间段**。\n';
+  p += '段落结构：视频规格 + 风格定调 + 主体外貌细节 + 场景环境 + 动作过程（含台词） + 镜头语言 + 灯光氛围 + 音效 + 禁止项。\n\n';
   p += '### 正确示例（参考这种写法）\n';
   p += '电影级写实风格，史诗奇幻，15秒，16:9。古树参天的幽深密林中，一头体型壮硕的吊睛白额猛虎妖被五花大绑悬吊在粗壮的古树枝干上，皮毛油亮如绸缎，利爪寒光闪烁。画外音A不耐烦地喊道"手抬高点——再高一点，胆子大一点！"，猛虎小心翼翼地将一只虎掌向上反复试探挪动，琥珀色的眼瞳紧盯着前方，每挪动一寸便侧头望向画外音方向，眼神里满是请示与讨好。画外音B突然发问"另外只手捆牢了没？"，猛虎低头一看，另一只爪子上的麻绳正一圈圈松脱滑落，它慌忙用嘴叼住绳头，龇着獠牙试图把自己重新缠回去，动作笨拙滑稽。镜头以中近景缓缓推进捕捉猛虎表情，侧逆光勾勒皮毛轮廓，林间丁达尔光束穿过薄雾，环境音为虫鸣风声与绳索摩擦声，配以紧张诙谐的弦乐。禁止任何文字、字幕、LOGO或水印。\n\n';
 
   p += '## 重要规则\n';
   p += '- **绝对不要缩减用户的剧本内容**，用户写的每个细节都要保留\n';
   p += '- **绝对不要输出JSON、参数表格、分析说明**，只输出提示词文本本身\n';
-  p += '- **不要输出"提示词："之类的标题**，直接从风格定调开始\n';
+  p += '- **不要输出"提示词："之类的标题**，直接从视频规格或风格定调开始\n';
   p += '- **绝对不要使用时间戳分镜**（如"0-3秒""3-7秒"），整个提示词是一段连续文字\n';
-  p +=('- **绝对不要分行、分点、用序号列表**，所有内容融合在一个自然段落中\n');
-  p += '- 如果用户提到时长和比例就直接使用；未提及则根据内容推荐\n';
-  p += '- 如果用户有台词/对白，必须完整保留并用引号标注语气\n';
-  p +=('- 台词融入叙事中自然出现，不要单独列出\n');
+  p += '- **绝对不要分行、分点、用序号列表**，所有内容融合在一个自然段落中\n';
+  p += '- 如果用户有台词/对白，必须完整保留并用引号标注语气，融入叙事中自然出现\n';
   p += '- 参考扩展库的专业描述来增强画面感，但不要生硬堆砌关键词\n';
+  p += '- 明确镜头运动方式、景别角度、光线方向和结束姿态\n';
   p += '- 末尾加上"禁止任何文字、字幕、LOGO或水印"';
 
   return p;
@@ -1860,10 +1922,28 @@ function fillExample(){
   $('aiInput').value = examples[Math.floor(Math.random() * examples.length)];
 }
 
-async function aiGenerate(){
+/* 计时器 */
+function startAITimer(){
+  let seconds = 0;
+  if(_aiTimerInterval) clearInterval(_aiTimerInterval);
+  let timerEl = $('aiTimer');
+  if(timerEl) timerEl.style.display = 'block';
+  _aiTimerInterval = setInterval(()=>{
+    seconds++;
+    let m = Math.floor(seconds/60);
+    let s = String(seconds%60).padStart(2,'0');
+    if(timerEl) timerEl.textContent = m + ':' + s;
+  }, 1000);
+}
+function stopAITimer(){
+  if(_aiTimerInterval){ clearInterval(_aiTimerInterval); _aiTimerInterval = null; }
+}
+
+/* 核心优化函数 */
+async function aiOptimize(){
   let userInput = $('aiInput').value.trim();
-  if(!userInput){ setStatus('请输入创意想法'); return; }
-  
+  if(!userInput){ setStatus('请输入剧本或创意'); return; }
+
   let apiKey = getApiKey();
   if(!apiKey){
     apiKey = $('apiKey').value.trim();
@@ -1875,18 +1955,35 @@ async function aiGenerate(){
       return;
     }
   }
-  
+
   let model = $('aiModel').value;
-  let btn = $('aiGenerateBtn');
+  let instruction = $('aiInstruction') ? $('aiInstruction').value.trim() : '';
+  let videoSpec = buildVideoSpec();
+  let btn = $('aiOptimizeBtn');
+
+  // 保存原始文本
+  _aiOriginalText = userInput;
+
   btn.disabled = true;
-  btn.textContent = '⏳ AI 生成中...';
+  btn.textContent = '⏳ 优化中...';
   $('aiStatus').style.display = 'block';
   $('aiResult').style.display = 'none';
   $('aiSpinner').style.display = 'block';
-  $('aiStatusText').textContent = 'AI 正在生成专业提示词，保留你的所有细节并增强画面感...';
-  
+  $('aiStatusText').textContent = instruction ? 'AI 正在按你的方向优化提示词...' : 'AI 正在优化提示词，保留你的所有细节并增强画面感...';
+  $('aiStatus').querySelector('div').classList.remove('ai-success', 'ai-error');
+  startAITimer();
+
   let systemPrompt = buildSystemPrompt();
-  let userPrompt = '用户输入的剧本/创意：\n\n' + userInput + '\n\n请直接生成一段完整的 Seedance 2.0 专业提示词。要求：\n1. 保留我的所有细节，补充镜头语言、灯光氛围、音效设计\n2. 输出一段连续流畅的叙事文字，像导演口述画面\n3. 绝对不要用时间戳分镜（如"0-3秒"），不要分行分点\n4. 台词融入叙事中自然出现\n5. 直接输出提示词文本，不要任何标题或说明';
+
+  // 构建用户消息 - 包含视频参数、原始文本和优化方向
+  let userPrompt = '';
+  if(videoSpec) userPrompt += '视频参数：' + videoSpec + '\n\n';
+  userPrompt += '需要优化的剧本/创意：\n\n' + userInput;
+  if(instruction){
+    userPrompt += '\n\n优化方向：' + instruction + '\n请按此方向优化，但保持原始内容完整。';
+  } else {
+    userPrompt += '\n\n请优化为专业的 Seedance 2.0 提示词。要求：\n1. 保留我的所有细节\n2. 补充镜头运动、景别角度、光线方向和结束姿态\n3. 输出一段连续流畅的叙事文字\n4. 绝对不要用时间戳分镜，不要分行分点\n5. 直接输出提示词文本';
+  }
 
   try {
     let response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -1916,24 +2013,128 @@ async function aiGenerate(){
 
     let data = await response.json();
     let promptText = data.choices[0].message.content.trim();
-    _aiPromptText = promptText;
+    _aiOptimizedText = promptText;
 
-    // 直接显示提示词文本
+    // 显示优化结果
     $('aiPromptOutput').value = promptText;
-    $('aiStatusText').textContent = '✅ 提示词生成完成！可复制或发送到生成结果';
+    $('aiSpinner').style.display = 'none';
+    $('aiStatusText').textContent = '✅ 优化完成！可复制、发送到生成结果或查看对比';
     $('aiStatus').querySelector('div').classList.add('ai-success');
     $('aiResult').style.display = 'block';
-    setStatus('AI 提示词生成完成');
+    $('aiDiffBar').style.display = 'flex';
+    $('aiDiffView').style.display = 'none';
+    _aiDiffVisible = false;
+    stopAITimer();
+    setStatus('AI 提示词优化完成');
 
   } catch(err) {
     $('aiSpinner').style.display = 'none';
     $('aiStatusText').textContent = '❌ ' + err.message;
     $('aiStatus').querySelector('div').classList.add('ai-error');
-    setStatus('AI 生成失败: ' + err.message);
+    stopAITimer();
+    setStatus('AI 优化失败: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '🚀 AI 生成提示词';
+    btn.textContent = '✨ 优化提示词';
   }
+}
+
+/* 再次优化 - 在优化结果基础上继续优化 */
+function aiOptimizeAgain(){
+  if(!_aiOptimizedText){ setStatus('请先优化一次'); return; }
+  $('aiInput').value = _aiOptimizedText;
+  $('aiInstruction').value = '';
+  $('aiInstruction').focus();
+  $('aiResult').style.display = 'none';
+  $('aiStatus').style.display = 'none';
+  setStatus('已加载优化结果，输入新的优化方向后点击优化');
+}
+
+/* 查看对比 - 逐字差异对比 */
+function toggleDiff(){
+  if(!_aiOriginalText || !_aiOptimizedText){ setStatus('没有可对比的内容'); return; }
+  _aiDiffVisible = !_aiDiffVisible;
+  if(_aiDiffVisible){
+    let diffHTML = buildDiffHTML(_aiOriginalText, _aiOptimizedText);
+    $('aiDiffContent').innerHTML = diffHTML;
+    $('aiDiffView').style.display = 'block';
+    $('diffToggleBtn').textContent = '📊 隐藏对比';
+  } else {
+    $('aiDiffView').style.display = 'none';
+    $('diffToggleBtn').textContent = '📊 查看对比';
+  }
+}
+
+/* 构建差异对比 HTML */
+function buildDiffHTML(oldText, newText){
+  // 简单的逐字符差异算法
+  let oldChars = Array.from(oldText);
+  let newChars = Array.from(newText);
+  let m = oldChars.length, n = newChars.length;
+  // LCS DP
+  let dp = Array.from({length:m+1}, ()=>new Array(n+1).fill(0));
+  for(let i=m-1;i>=0;i--){
+    for(let j=n-1;j>=0;j--){
+      dp[i][j] = oldChars[i]===newChars[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    }
+  }
+  let result = [];
+  let i=0, j=0;
+  while(i<m && j<n){
+    if(oldChars[i]===newChars[j]){
+      result.push({type:'equal', text:oldChars[i]});
+      i++; j++;
+    } else if(dp[i][j+1] >= dp[i+1][j]){
+      result.push({type:'insert', text:newChars[j]});
+      j++;
+    } else {
+      result.push({type:'delete', text:oldChars[i]});
+      i++;
+    }
+  }
+  while(i<m){ result.push({type:'delete', text:oldChars[i]}); i++; }
+  while(j<n){ result.push({type:'insert', text:newChars[j]}); j++; }
+
+  // 合并连续相同类型
+  let merged = [];
+  for(let r of result){
+    let last = merged[merged.length-1];
+    if(last && last.type===r.type) last.text += r.text;
+    else merged.push({type:r.type, text:r.text});
+  }
+
+  let html = '<div style="margin-bottom:8px;font-size:12px;color:var(--text-light)">';
+  html += '<span style="background:#fee2e2;padding:2px 6px;border-radius:3px">红色删除</span> = 原始内容，';
+  html += '<span style="background:#d1fae5;padding:2px 6px;border-radius:3px">绿色新增</span> = AI 优化新增';
+  html += '</div>';
+
+  for(let seg of merged){
+    if(seg.type==='equal'){
+      html += '<span style="color:var(--text)">' + escapeHTML(seg.text) + '</span>';
+    } else if(seg.type==='delete'){
+      html += '<span style="background:#fee2e2;color:#991b1b;text-decoration:line-through">' + escapeHTML(seg.text) + '</span>';
+    } else if(seg.type==='insert'){
+      html += '<span style="background:#d1fae5;color:#065f46">' + escapeHTML(seg.text) + '</span>';
+    }
+  }
+  return html;
+}
+
+function escapeHTML(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* 撤销 - 恢复原始内容 */
+function undoOptimize(){
+  if(!_aiOriginalText){ setStatus('没有可撤销的内容'); return; }
+  $('aiPromptOutput').value = _aiOriginalText;
+  $('aiInput').value = _aiOriginalText;
+  $('aiResult').style.display = 'none';
+  $('aiStatus').style.display = 'none';
+  $('aiDiffView').style.display = 'none';
+  _aiDiffVisible = false;
+  _aiOptimizedText = '';
+  setStatus('已恢复原始内容');
 }
 
 function copyAIPrompt(){
@@ -1959,13 +2160,6 @@ function sendToResult(){
   switchTab('result');
 }
 
-function regenerateAI(){
-  $('aiResult').style.display = 'none';
-  $('aiStatus').style.display = 'none';
-  $('aiStatus').querySelector('div').classList.remove('ai-success', 'ai-error');
-  aiGenerate();
-}
-
 // 初始化时加载保存的 API Key 和模型
 function initAISettings(){
   let savedKey = getApiKey();
@@ -1983,6 +2177,22 @@ function initAISettings(){
    更新日志模块
    ============================================================ */
 const changelogData = [
+  {
+    version: "v2.3",
+    date: "2026-07-08",
+    title: "AI 模块重构 - 提示词优化器（参考暖梦 AIGC）",
+    type: "major",
+    items: [
+      "AI 模块从「生成」改为「优化」模式，保留用户原始内容并增强",
+      "新增视频参数设置（画幅比例、时长、清晰度），AI 会自动适配",
+      "新增优化方向输入，可引导 AI 按特定方向优化（如更紧张、加快节奏）",
+      "新增查看对比功能，逐字差异高亮显示优化前后变化",
+      "新增撤销功能，可恢复原始内容",
+      "新增再次优化功能，支持在优化结果基础上迭代优化",
+      "新增优化计时器，显示 API 调用耗时",
+      "系统提示词增加单一场景连续性约束和镜头运动指导"
+    ]
+  },
   {
     version: "v2.2",
     date: "2026-07-08",
