@@ -160,6 +160,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
     <div class="nav-item" data-tab="audio"><span class="icon">🔊</span>音效设计</div>
     <div class="nav-item" data-tab="advanced"><span class="icon">⚙️</span>高级设置</div>
     <div class="nav-item" data-tab="result"><span class="icon">✨</span>生成结果</div>
+    <div class="nav-item" data-tab="changelog"><span class="icon">📅</span>更新日志</div>
   </div>
 
   <div class="content" id="content">
@@ -599,12 +600,21 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
       </div>
     </div>
 
+    <!-- 更新日志面板 -->
+    <div class="panel" id="panel-changelog">
+      <div class="card">
+        <div class="card-title"><span class="ti">📅</span>更新日志</div>
+        <div class="card-desc">记录每次版本更新的内容，方便了解功能变化</div>
+        <div id="changelogContainer" style="margin-top:16px"></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
 <div class="statusbar">
-  <span class="dot" id="statusDot"></span>
-  <span id="statusText">就绪 | 调整参数后在「生成结果」页查看提示词</span>
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">就绪 | 调整参数后在「生成结果」页查看提示词</span>
 </div>
 
 <script>
@@ -1027,6 +1037,8 @@ function initUI(){
   });
   // 初始化时间轴
   rebuildTimelineSegments();
+  // 渲染更新日志
+  renderChangelog();
   // 初始生成
   generatePrompt();
   initAISettings();
@@ -2099,6 +2111,101 @@ function initAISettings(){
   if(savedModel){
     $('aiModel').value = savedModel;
   }
+}
+
+/* ============================================================
+   更新日志模块
+   ============================================================ */
+const changelogData = [
+  {
+    version: "v2.1",
+    date: "2026-07-08",
+    title: "接入 DeepSeek AI + 公网部署",
+    type: "major",
+    items: [
+      "新增 🤖 AI 生成功能：接入 DeepSeek V4 Pro/Flash 大模型，一句话生成完整提示词",
+      "AI 系统提示词注入程序全部专业知识（181个扩展库关键词+9组情绪预设+15个场景模板+时间戳分镜法）",
+      "API Key 由用户自己输入，存储在浏览器本地，不经过任何服务器",
+      "部署到 GitHub Pages，公网链接：https://541143001.github.io/seedance-prompt-generator/",
+      "更新后大家刷新浏览器即可同步最新版本，链接永久不变"
+    ]
+  },
+  {
+    version: "v2.0",
+    date: "2026-07-08",
+    title: "桌面版转 Web 版",
+    type: "major",
+    items: [
+      "将 Python Tkinter 桌面程序完整转换为纯前端 HTML/CSS/JS 网页应用",
+      "完整翻译全部扩展库数据（主体21词/动作46词/场景40词/灯光11词/镜头30词）",
+      "完整翻译 generate_prompt 核心逻辑（前缀→主体→动作→场景→台词→风格→镜头→灯光→音效→约束→禁止项→负面提示词）",
+      "16个场景模板、时间轴分镜、9个情绪预设、智能填充、智能优化全部移植",
+      "现代化卡片式UI设计，响应式布局支持移动端",
+      "单文件自包含，120KB，无外部依赖"
+    ]
+  },
+  {
+    version: "v1.2",
+    date: "2026-07-08",
+    title: "UI 优化 + 功能精简",
+    type: "minor",
+    items: [
+      "去掉风格预设功能（与场景模板冲突）",
+      "去掉多模态引用系统（实际用处不大）",
+      "UI 美观升级：扁平化按钮、卡片风格分组框、悬停效果、现代化配色",
+      "标签页从12个精简为11个"
+    ]
+  },
+  {
+    version: "v1.1",
+    date: "2026-07-08",
+    title: "整合 GitHub 开源方法论",
+    type: "minor",
+    items: [
+      "基于 GitHub 高星仓库（songguoxs/seedance-prompt-skill 2.2k stars）新增时间轴分镜标签页",
+      "基于 liangdabiao/make-prompt-seedance2 新增16个场景模板标签页",
+      "新增多模态引用标签页（后移除）",
+      "增强禁止项声明和超长视频分段策略"
+    ]
+  },
+  {
+    version: "v1.0",
+    date: "2026-07-08",
+    title: "初始版本",
+    type: "minor",
+    items: [
+      "Seedance 2.0 提示词生成器桌面版（Python + Tkinter）",
+      "8个配置标签页：基本设置、剧本分析、主体内容、视觉风格、镜头设计、灯光氛围、音效设计、高级设置",
+      "基于 Seedance 2.0 五大方法论：分层风格方法、镜头合约、灯光合约、源外观锁定、风格安全规则",
+      "PyInstaller 打包为 Windows exe"
+    ]
+  }
+];
+
+function renderChangelog(){
+  let container = $('changelogContainer');
+  if(!container) return;
+  let html = '';
+  for(let i=0; i<changelogData.length; i++){
+    let entry = changelogData[i];
+    let typeColor = entry.type === 'major' ? 'var(--primary)' : 'var(--secondary)';
+    let typeLabel = entry.type === 'major' ? ' major' : ' minor';
+    let typeBg = entry.type === 'major' ? 'var(--hover)' : 'var(--bg-light)';
+    html += '<div style="margin-bottom:20px;border-left:3px solid ' + typeColor + ';padding-left:16px">';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">';
+    html += '<span style="font-size:18px;font-weight:700;color:' + typeColor + '">' + entry.version + '</span>';
+    html += '<span style="font-size:12px;color:var(--text-dark);background:' + typeBg + ';padding:2px 8px;border-radius:10px">' + typeLabel + '</span>';
+    html += '<span style="font-size:13px;color:var(--text-light)">' + entry.date + '</span>';
+    html += '</div>';
+    html += '<div style="font-weight:600;font-size:14px;margin-bottom:6px">' + entry.title + '</div>';
+    html += '<ul style="margin:0;padding-left:18px;line-height:1.8;font-size:13px;color:var(--text-light)">';
+    for(let j=0; j<entry.items.length; j++){
+      html += '<li style="margin-bottom:3px">' + entry.items[j] + '</li>';
+    }
+    html += '</ul>';
+    html += '</div>';
+  }
+  container.innerHTML = html;
 }
 
 window.addEventListener('DOMContentLoaded',initUI);
