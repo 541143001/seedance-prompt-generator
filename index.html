@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seedance 2.0 提示词生成器 v2.5</title>
+<title>Seedance 2.0 提示词生成器 v2.6</title>
 <style>
 :root{
   --primary:#6366F1;--primary-dark:#4F46E5;--primary-light:#818CF8;
@@ -164,7 +164,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
 <div class="header">
   <h1>🎬 Seedance 2.0 提示词生成器</h1>
-  <span class="ver">v2.5</span>
+  <span class="ver">v2.6</span>
   <div class="spacer"></div>
   <span class="badge">🤖 DeepSeek AI 驱动</span>
 </div>
@@ -629,6 +629,24 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
         </div>
       </div>
       <div class="card">
+        <div class="card-title"><span class="ti">🎭</span>情绪状态（四维度表演指导）</div>
+        <div class="card-desc">选择角色的情绪状态，自动生成表情细节+手部动作+身体姿态+视线方向的专业表演描述</div>
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="form-group" style="flex:1;min-width:200px">
+            <label>情绪类型</label>
+            <select id="emotionState" onchange="onEmotionStateChange()">
+              <option value="">选择情绪...</option>
+            </select>
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-sm btn-ghost" onclick="applyEmotionState()">应用到提示词</button>
+          </div>
+        </div>
+        <div id="emotionPreview" style="display:none;padding:14px 16px;background:var(--bg-light);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:13px;line-height:1.8">
+        </div>
+      </div>
+      <div class="card">
         <div class="card-title"><span class="ti">✏️</span>自定义灯光补充</div>
         <textarea id="lightCustom" rows="2" placeholder="自定义灯光描述" oninput="generatePrompt()"></textarea>
       </div>
@@ -1050,6 +1068,34 @@ const moodPresets = {
 };
 
 /* ============================================================
+   3.5 情绪状态库（表情+手部+身体+视线 四维度）
+   ============================================================ */
+const emotionStates = {
+  "开心": {"表情":"嘴角上扬，眼睛微微弯起，脸颊微红", "手部":"手自然放松或轻拍", "身体":"身体稍微前倾，肩膀放松", "视线":"眼神柔和，看向开心的人或物"},
+  "悲伤": {"表情":"嘴角下垂，眉头微蹙，眼眶泛红泪光闪烁", "手部":"双手无力垂落或攥紧衣角", "身体":"身体微微蜷缩，肩膀内收下沉", "视线":"视线低垂，望向地面或远方空旷处"},
+  "愤怒": {"表情":"眉头紧锁，嘴唇紧抿，面部肌肉绷紧", "手部":"双拳紧握，指节发白", "身体":"身体前倾，肩膀高耸，胸腔扩张", "视线":"眼神凌厉直视对方，目光如炬"},
+  "恐惧": {"表情":"眼睛瞪大，瞳孔收缩，嘴唇微颤", "手部":"双手不自觉握紧或抱住自己", "身体":"身体后退或蜷缩，肩膀紧绷", "视线":"视线慌乱游移，或死死盯住恐惧源"},
+  "惊讶": {"表情":"嘴巴微张，眼睛圆睁，眉毛上挑", "手部":"手骤然停顿或不由自主捂住嘴", "身体":"身体瞬间僵住，微微后仰", "视线":"视线锁定惊讶源，目不转睛"},
+  "厌恶": {"表情":"鼻子皱起，上唇翻卷，眉头下压", "手部":"手推开或遮住口鼻", "身体":"身体后仰偏转，远离厌恶源", "视线":"视线斜向避开，不屑直视"},
+  "期待": {"表情":"嘴角含笑，眼睛发亮，眉毛微挑", "手部":"双手轻轻搓动或交握", "身体":"身体微微前倾，脚尖朝向期待方向", "视线":"视线聚焦于期待之物，目光追随"},
+  "平静": {"表情":"面部肌肉放松，嘴角自然平直", "手部":"双手自然放置或轻微交叠", "身体":"身体端正放松，呼吸均匀", "视线":"视线平稳，目光澄澈安定"},
+  "紧张": {"表情":"嘴唇微抿，眼神闪烁，额头微汗", "手部":"手指无意识绞动或反复摸手指", "身体":"身体僵硬，肩膀上提", "视线":"视线频繁游移，难以聚焦"},
+  "困惑": {"表情":"眉头微蹙，歪头，嘴角略向下", "手部":"手摸后脑勺或下巴", "身体":"身体微微倾斜，重心偏移", "视线":"视线来回扫视，反复打量困惑源"},
+  "得意": {"表情":"嘴角上扬一侧，眼神狡黠，下巴微抬", "手部":"手指交叉或单手挥摆", "身体":"身体后仰靠椅背，姿态舒展", "视线":"视线斜向上方，俯视感"},
+  "害羞": {"表情":"脸颊泛红，目光躲闪，嘴角抿笑", "手部":"手指绞在一起或拢耳后头发", "身体":"身体微微侧转，肩膀内收", "视线":"视线低垂或偏向一侧，偶尔偷看"},
+  "骄傲": {"表情":"下巴高抬，嘴角微扬，眼神坚定", "手部":"双手叉腰或交叉胸前", "身体":"身体挺直，胸膛挺起", "视线":"视线平视前方，目光自信从容"},
+  "绝望": {"表情":"面无表情眼神空洞，嘴唇微张", "手部":"双手无力垂落或缓缓滑落", "身体":"身体瘫软跪地或靠着滑坐", "视线":"视线涣散，无焦点地望向虚空"},
+  "警惕": {"表情":"眉头微蹙，嘴唇紧闭，面部绷紧", "手部":"手悄悄握拳或按住身边物件", "身体":"身体紧绷微蹲，重心下压", "视线":"视线锐利扫视四周，余光警戒"},
+  "思念": {"表情":"眼神迷蒙嘴角含笑又带哀愁", "手部":"手轻触旧物或抚胸口", "身体":"身体静止伫立或倚靠窗边", "视线":"视线望向远方，目光悠远绵长"},
+  "愧疚": {"表情":"眉头紧蹙嘴角下压，眼神闪躲", "手部":"双手交叉反复搓动或低头摸手", "身体":"身体微微低头缩肩", "视线":"视线回避对方，不敢对视"},
+  "不屑": {"表情":"嘴角一撇，鼻子轻哼，眉毛微挑", "手部":"手随意挥动或交叉胸前", "身体":"身体后仰歪头，姿态散漫", "视线":"视线斜睨，由上而下扫视"},
+  "感动": {"表情":"眼眶泛红泪光涌动，嘴唇微颤", "手部":"双手捂胸口或轻掩嘴唇", "身体":"身体微微前倾，呼吸屏住", "视线":"视线凝视感动源，目光温柔湿润"},
+  "狂喜": {"表情":"大笑露出牙齿，眼睛弯成月牙", "手部":"双手高举挥舞或鼓掌", "身体":"身体跳跃旋转，动作幅度大", "视线":"视线明亮四射，目光兴奋不停转动"},
+  "沉思": {"表情":"眉头微蹙嘴唇轻抿，目光内敛", "手部":"手指轻抵下巴或太阳穴", "身体":"身体静止端坐或缓慢踱步", "视线":"视线低垂或望向侧方，若有所思"},
+  "暧昧": {"表情":"嘴角含笑眼神拉丝，微咬下唇", "手部":"手指轻绕发丝或触碰对方手背", "身体":"身体微微靠近，姿态柔软", "视线":"视线交缠，目光含情脉脉"}
+};
+
+/* ============================================================
    4. 预设模板（基本设置页快速模板）
    ============================================================ */
 const presetTemplates = {
@@ -1184,6 +1230,14 @@ function initUI(){
     let op=document.createElement('option');op.value=k;op.textContent=k;
     mp.appendChild(op);
   });
+  // 情绪状态下拉
+  let es=$('emotionState');
+  if(es){
+    Object.keys(emotionStates).forEach(k=>{
+      let op=document.createElement('option');op.value=k;op.textContent=k;
+      es.appendChild(op);
+    });
+  }
   // 导航切换
   document.querySelectorAll('.nav-item').forEach(item=>{
     item.addEventListener('click',()=>switchTab(item.dataset.tab));
@@ -1586,6 +1640,58 @@ function applyMoodPreset(){
   setVal('lightCustom',p.custom);
   generatePrompt();
   setStatus('已应用情绪预设: '+preset);
+}
+
+/* ============================================================
+   情绪状态（四维度表演指导）
+   ============================================================ */
+function onEmotionStateChange(){
+  let key = $('emotionState').value;
+  let preview = $('emotionPreview');
+  if(!key || !emotionStates[key]){
+    preview.style.display = 'none';
+    return;
+  }
+  let e = emotionStates[key];
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">`;
+  html += `<div><span style="color:var(--primary);font-weight:600">😊 表情细节</span><br><span style="color:var(--text)">${e.表情}</span></div>`;
+  html += `<div><span style="color:var(--primary);font-weight:600">✋ 手部动作</span><br><span style="color:var(--text)">${e.手部}</span></div>`;
+  html += `<div><span style="color:var(--primary);font-weight:600">🧍 身体姿态</span><br><span style="color:var(--text)">${e.身体}</span></div>`;
+  html += `<div><span style="color:var(--primary);font-weight:600">👁️ 视线方向</span><br><span style="color:var(--text)">${e.视线}</span></div>`;
+  html += `</div>`;
+  preview.innerHTML = html;
+  preview.style.display = 'block';
+}
+
+function applyEmotionState(){
+  let key = $('emotionState').value;
+  if(!key || !emotionStates[key]){ setStatus('请先选择情绪类型'); return; }
+  let e = emotionStates[key];
+  let desc = `${key}：表情${e.表情}，${e.手部}，${e.身体}，${e.视线}`;
+  // 追加到主体内容的动作描述中
+  let actionEl = $('actionText');
+  if(actionEl){
+    let current = actionEl.value.trim();
+    if(current && !current.includes(key)){
+      actionEl.value = current + '。' + desc;
+    } else if(!current){
+      actionEl.value = desc;
+    } else {
+      setStatus('当前动作描述已包含「' + key + '」情绪');
+      generatePrompt();
+      return;
+    }
+  }
+  generatePrompt();
+  saveFormState();
+  setStatus('已应用「' + key + '」情绪状态到主体内容');
+}
+
+function getEmotionStateText(){
+  let key = $('emotionState') ? $('emotionState').value : '';
+  if(!key || !emotionStates[key]) return '';
+  let e = emotionStates[key];
+  return `${key}：表情${e.表情}，${e.手部}，${e.身体}，${e.视线}`;
 }
 
 /* ============================================================
@@ -2243,6 +2349,14 @@ function buildSystemPrompt(){
     p += `- "${k}"：光源=${m.source}，色温=${m.color}，氛围=${m.atmosphere}，灯光=${m.custom}\n`;
   }
 
+  // === 情绪状态四维度库 ===
+  p += '\n## 情绪状态四维度表演指导（表情+手部+身体+视线）\n';
+  p += '当剧本中涉及角色情绪时，参考下表为角色添加专业的表演细节描述：\n';
+  for(let k in emotionStates){
+    let e = emotionStates[k];
+    p += `- "${k}"：表情=${e.表情}；手部=${e.手部}；身体=${e.身体}；视线=${e.视线}\n`;
+  }
+
   // === 输出格式 ===
   p += '\n## 输出格式要求（极其重要）\n';
   p += '输出一段**连续流畅的叙事段落**，像电影导演口述画面一样自然连贯。\n';
@@ -2555,6 +2669,19 @@ function initAISettings(){
    更新日志模块
    ============================================================ */
 const changelogData = [
+  {
+    version: "v2.6",
+    date: "2026-07-09",
+    title: "情绪状态四维度系统",
+    type: "major",
+    items: [
+      "新增22种情绪状态库，每种包含表情细节+手部动作+身体姿态+视线方向四个维度",
+      "灯光氛围页新增情绪状态选择器，选择后实时预览四维度描述",
+      "点击「应用到提示词」自动将情绪描述追加到主体内容",
+      "AI系统提示词注入完整情绪状态库，AI优化时自动匹配并增强角色表演细节",
+      "情绪类型：开心/悲伤/愤怒/恐惧/惊讶/厌恶/期待/平静/紧张/困惑/得意/害羞/骄傲/绝望/警惕/思念/愧疚/不屑/感动/狂喜/沉思/暧昧"
+    ]
+  },
   {
     version: "v2.5",
     date: "2026-07-08",
