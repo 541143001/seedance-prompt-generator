@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seedance 2.0 提示词生成器 v2.7</title>
+<title>Seedance 2.0 提示词生成器 v2.8</title>
 <style>
 :root{
   --primary:#6366F1;--primary-dark:#4F46E5;--primary-light:#818CF8;
@@ -164,7 +164,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
 <div class="header">
   <h1>🎬 Seedance 2.0 提示词生成器</h1>
-  <span class="ver">v2.7</span>
+  <span class="ver">v2.8</span>
   <div class="spacer"></div>
   <span class="badge">🤖 DeepSeek AI 驱动</span>
 </div>
@@ -344,60 +344,63 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
     <!-- 图片反推 -->
     <div class="panel" id="panel-image2prompt">
       <div class="hero-banner" style="background:linear-gradient(135deg,#0EA5E9 0%,#6366F1 100%)">
-        <h2>🖼️ 图片反推提示词</h2>
-        <p>上传一张图片，AI 自动识别画面内容并反推出一段专业的 Seedance 2.0 视频提示词。适用于参考图生视频、风格迁移等场景。</p>
+        <h2>🖼️ 图片/视频反推提示词</h2>
+        <p>上传图片或视频截图，AI 进行 6 维度专业级深度分析（主体/场景/镜头/光影/风格/氛围），输出可直接用于 AI 视频生成的结构化提示词。支持多图批量分析。</p>
         <div class="hero-tags">
-          <span class="hero-tag">🎨 画面分析</span>
-          <span class="hero-tag">📊 风格识别</span>
-          <span class="hero-tag">💡 光线推断</span>
-          <span class="hero-tag">🎬 镜头建议</span>
+          <span class="hero-tag">📊 六维分析</span>
+          <span class="hero-tag">🎬 镜头语言</span>
+          <span class="hero-tag">💡 光影推断</span>
+          <span class="hero-tag">📌 核心提示词</span>
         </div>
       </div>
 
       <div class="card">
         <div class="card-title"><span class="ti">🔑</span>API 设置</div>
-        <div class="card-desc">图片反推使用智谱 GLM-4V 视觉模型，<a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">点此免费获取 API Key</a>（GLM-4V-Flash 模型免费）</div>
+        <div class="form-row" style="gap:8px;margin-bottom:10px">
+          <select id="visionProvider" onchange="onVisionProviderChange()" style="flex:1">
+            <option value="zhipu">智谱 AI（GLM-4V-Plus）</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+        </div>
         <div class="field" style="margin-bottom:8px">
-          <input type="password" id="visionApiKey" placeholder="输入智谱 API Key（或使用已保存的 DeepSeek Key）" style="flex:1">
+          <input type="password" id="visionApiKey" placeholder="输入 API Key" style="flex:1">
           <button class="btn btn-sm btn-ghost" onclick="toggleVisionKeyVisibility()">👁️ 显示</button>
           <button class="btn btn-sm btn-secondary" onclick="saveVisionKey()">💾 保存</button>
         </div>
         <div class="hint" id="visionKeyHint" style="margin-bottom:8px">
-          API Key 保存在浏览器本地，不会上传。推荐使用智谱 API Key（免费额度大），也支持 DeepSeek API Key。
+          API Key 保存在浏览器本地。<a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">获取智谱 Key</a> · <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">获取 Gemini Key</a> · <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--primary)">获取 OpenRouter Key</a>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="ti">📤</span>上传图片</div>
-        <div class="card-desc">支持 JPG、PNG、WebP、GIF 格式，建议图片小于 4MB</div>
+        <div class="card-title"><span class="ti">📤</span>上传图片（支持多图）</div>
+        <div class="card-desc">上传 1 张图片进行单图分析，或多张图片（视频截图序列）进行批量分析。JPG/PNG/WebP，每张小于 4MB</div>
         <div id="uploadZone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg-light)" onclick="$('imageFileInput').click()" onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--hover)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-light)'">
           <div style="font-size:36px;margin-bottom:8px">📎</div>
           <div style="font-size:14px;font-weight:600;color:var(--text)">点击上传或拖拽图片到此处</div>
-          <div style="font-size:12px;color:var(--text-light);margin-top:4px">JPG / PNG / WebP / GIF · 最大 4MB</div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:4px">支持多选 · JPG / PNG / WebP · 最大 4MB/张</div>
         </div>
-        <input type="file" id="imageFileInput" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+        <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none" onchange="handleImageUpload(this)">
         <div id="imagePreview" style="display:none;margin-top:14px">
-          <div style="display:flex;gap:14px;align-items:flex-start">
-            <img id="previewImg" style="max-width:200px;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border);object-fit:cover">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:600;margin-bottom:4px" id="imageInfo"></div>
-              <div style="font-size:12px;color:var(--text-light);margin-bottom:8px" id="imageSize"></div>
-              <button class="btn btn-sm btn-ghost" onclick="clearImage()">🗑️ 移除图片</button>
-            </div>
+          <div id="imagePreviewGrid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px"></div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span id="imageCount" style="font-size:13px;color:var(--text-light)"></span>
+            <button class="btn btn-sm btn-ghost" onclick="clearImage()">🗑️ 清除全部</button>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="ti">⚙️</span>反推设置</div>
+        <div class="card-title"><span class="ti">⚙️</span>分析模式</div>
         <div class="form-row" style="gap:8px;margin-bottom:10px">
-          <select id="visionModel" style="flex:1">
-            <option value="glm-4v-flash">GLM-4V-Flash（免费·推荐）</option>
-            <option value="glm-4v">GLM-4V（更精准·收费）</option>
+          <select id="visionMode" style="flex:1">
+            <option value="single">单图分析（1张图片深度分析）</option>
+            <option value="batch">批量分析（多张视频截图序列分析）</option>
           </select>
         </div>
         <div class="btn-row">
-          <button class="btn btn-primary" onclick="reversePrompt()" id="reverseBtn">🔍 开始反推</button>
+          <button class="btn btn-primary" onclick="reversePrompt()" id="reverseBtn">🔍 开始分析</button>
           <button class="btn btn-ghost" onclick="clearImage()">🗑️ 清除</button>
         </div>
       </div>
@@ -412,12 +415,19 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
       <div id="visionResult" style="display:none">
         <div class="card">
-          <div class="card-title"><span class="ti">📋</span>反推结果</div>
-          <textarea id="visionOutput" rows="12" style="font-size:13px;line-height:1.8;min-height:200px;background:var(--bg-light);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;resize:vertical"></textarea>
+          <div class="card-title"><span class="ti">📌</span>核心提示词（可直接复制使用）</div>
+          <div id="corePromptBox" style="padding:14px 16px;background:linear-gradient(135deg,#EEF2FF,#E0E7FF);border:1px solid #C7D2FE;border-radius:var(--radius-sm);font-size:14px;font-weight:600;color:var(--primary-dark);line-height:1.8;margin-bottom:10px"></div>
+          <div class="btn-row" style="margin-bottom:14px">
+            <button class="btn btn-success" onclick="copyCorePrompt()">📋 复制核心提示词</button>
+            <button class="btn btn-secondary" onclick="sendCoreToResult()">📤 发送到生成结果</button>
+            <button class="btn btn-ghost" onclick="sendCoreToAI()">🤖 发送到 AI 优化</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ti">📋</span>完整分析报告</div>
+          <textarea id="visionOutput" rows="16" style="font-size:13px;line-height:1.8;min-height:280px;background:var(--bg-light);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;resize:vertical"></textarea>
           <div class="btn-row" style="margin-top:10px">
-            <button class="btn btn-success" onclick="copyVisionResult()">📋 复制提示词</button>
-            <button class="btn btn-secondary" onclick="sendVisionToResult()">📤 发送到生成结果</button>
-            <button class="btn btn-ghost" onclick="sendVisionToAI()">🤖 发送到 AI 优化</button>
+            <button class="btn btn-ghost" onclick="copyVisionResult()">📋 复制完整报告</button>
           </div>
         </div>
       </div>
@@ -2751,22 +2761,48 @@ function initAISettings(){
 }
 
 /* ============================================================
-   图片反推提示词 - GLM-4V 视觉模型
+   图片反推提示词 - 基于 PromptLens 设计
+   支持 智谱GLM-4V / Gemini / OpenRouter 三种视觉模型
+   6维度深度分析：主体/场景/镜头/光影/风格/氛围
    ============================================================ */
-let _visionImageBase64 = '';
+let _visionImages = [];
 let _visionTimerInterval = null;
 
+const VISION_API_CONFIGS = {
+  zhipu: {
+    url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    model: 'glm-4v-plus',
+    maxTokens: 4096,
+    keyHint: '前往 <a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">智谱开放平台</a> 获取 API Key'
+  },
+  gemini: {
+    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
+    model: 'gemini-2.0-flash-exp',
+    maxTokens: 4096,
+    keyHint: '前往 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">Google AI Studio</a> 获取 API Key'
+  },
+  openrouter: {
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    model: 'google/gemini-2.5-pro',
+    maxTokens: 4096,
+    keyHint: '前往 <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--primary)">OpenRouter</a> 获取 API Key'
+  }
+};
+
+const SINGLE_ANALYSIS_PROMPT = '# 视频镜头提示词反推专家\n\n你是一位专业的AI视频提示词工程师。请分析用户提供的图片，从以下6个维度进行深度拆解，最终输出一段可直接用于AI视频生成的提示词。\n\n## 分析维度\n\n1. 主体描述：人物/动物/物体的外貌特征、服装穿搭、姿态动作、表情神态\n2. 场景环境：地点类型、天气条件、时间时段、背景元素、空间纵深\n3. 镜头语言：景别、机位角度、运镜方式、焦距效果\n4. 光影设计：光源方向、光线硬度、色温冷暖、明暗对比、阴影特征\n5. 风格质感：画面色调、视觉风格、材质质感、后期质感\n6. 氛围情绪：画面传达的情绪氛围、节奏感、叙事张力\n\n## 输出格式（极其重要，必须严格遵守）\n\n【核心提示词】\n（一段80-150字的精炼提示词，融合所有维度要素，用逗号连接，可直接复制使用。必须是一段连续文本，不要换行、不要分点、不要使用markdown格式。）\n\n【详细分析报告】\n\n主体描述：（详细描述主体特征）\n场景环境：（详细描述场景环境）\n镜头语言：（推荐镜头景别、运镜方式、拍摄角度）\n光影设计：（分析光影方向、色温、明暗对比）\n风格质感：（推荐色调风格、视觉质感）\n氛围情绪：（分析画面情绪氛围和叙事感）\n\n【完整视频提示词】\n（一段200-400字的完整视频提示词，将上述6个维度的分析融合为一段流畅的叙事段落。像电影导演口述画面一样，所有要素用逗号和句号连接。禁止使用markdown格式。末尾加上"禁止任何文字、字幕、LOGO或水印"。）\n\n## 规则\n1. 输出第一个字符必须是【\n2. 核心提示词必须精炼可直接使用\n3. 详细分析报告每项至少2-3句具体描述\n4. 完整视频提示词必须是连续叙事段落，不分点不换行\n5. 所有描述要具体而非笼统，给出可操作的专业建议';
+
+const BATCH_ANALYSIS_PROMPT = '# 视频镜头序列提示词反推专家\n\n你是一位专业的AI视频提示词工程师。用户上传了多张图片（视频截图序列），请分析这些图片构成的连续画面，从以下6个维度进行深度拆解，输出一组连贯的视频提示词。\n\n## 分析维度\n\n1. 主体描述：每张图片中的主体变化、动作演进、表情变化\n2. 场景环境：场景的连续性、环境变化、时空转换\n3. 镜头语言：每张图片对应的镜头景别、机位切换、运镜衔接\n4. 光影设计：光线变化、色温过渡、明暗节奏\n5. 风格质感：整体视觉风格统一性、色调连贯性\n6. 氛围情绪：情绪递进、节奏变化、叙事弧线\n\n## 输出格式（极其重要，必须严格遵守）\n\n【核心提示词】\n（一段100-200字的精炼提示词，描述整个视频序列的核心画面和动作流。必须是一段连续文本，不要换行、不要分点。）\n\n【详细分析报告】\n\n主体描述：（描述主体在整个序列中的变化）\n场景环境：（描述场景的连续性和变化）\n镜头语言：（推荐每张图对应的镜头和衔接方式）\n光影设计：（分析光影变化和色温过渡）\n风格质感：（推荐整体视觉风格）\n氛围情绪：（分析情绪递进和叙事弧线）\n\n【完整视频提示词】\n（一段300-500字的完整视频提示词，描述整个视频序列。将6个维度的分析融合为一段流畅的叙事段落。禁止使用markdown格式。末尾加上"禁止任何文字、字幕、LOGO或水印"。）\n\n## 规则\n1. 输出第一个字符必须是【\n2. 核心提示词必须精炼可直接使用\n3. 详细分析报告每项至少3-4句具体描述\n4. 完整视频提示词必须是连续叙事段落，不分点不换行\n5. 注重图片之间的连贯性和动作衔接';
+
 function initVisionSettings(){
+  let savedProvider = localStorage.getItem('vision_provider') || 'zhipu';
   let savedKey = localStorage.getItem('vision_api_key');
+  if($('visionProvider')) $('visionProvider').value = savedProvider;
   if(savedKey){
     $('visionApiKey').value = savedKey;
-    $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ 智谱 API Key 已加载</span> · <a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+    let cfg = VISION_API_CONFIGS[savedProvider];
+    $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已加载</span> · ' + cfg.keyHint;
   }
-  let savedModel = localStorage.getItem('vision_model');
-  if(savedModel){
-    $('visionModel').value = savedModel;
-  }
-  // 拖拽上传
+  updateVisionKeyHint();
   let zone = $('uploadZone');
   if(zone){
     zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.style.borderColor='var(--primary)'; zone.style.background='var(--hover)'; });
@@ -2775,10 +2811,28 @@ function initVisionSettings(){
       e.preventDefault();
       zone.style.borderColor='var(--border)'; zone.style.background='var(--bg-light)';
       if(e.dataTransfer.files.length>0){
-        let file = e.dataTransfer.files[0];
-        if(file.type.startsWith('image/')){ handleImageFile(file); }
+        for(let f of e.dataTransfer.files){
+          if(f.type.startsWith('image/')){ handleImageFile(f); }
+        }
       }
     });
+  }
+}
+
+function onVisionProviderChange(){
+  let provider = $('visionProvider').value;
+  localStorage.setItem('vision_provider', provider);
+  updateVisionKeyHint();
+}
+
+function updateVisionKeyHint(){
+  let provider = $('visionProvider').value;
+  let cfg = VISION_API_CONFIGS[provider];
+  let savedKey = localStorage.getItem('vision_api_key');
+  if(savedKey){
+    $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已加载</span> · ' + cfg.keyHint;
+  } else {
+    $('visionKeyHint').innerHTML = cfg.keyHint;
   }
 }
 
@@ -2786,44 +2840,69 @@ function saveVisionKey(){
   let key = $('visionApiKey').value.trim();
   if(!key){ setStatus('请输入 API Key'); return; }
   localStorage.setItem('vision_api_key', key);
-  $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已保存</span> · <a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+  updateVisionKeyHint();
   setStatus('API Key 已保存');
 }
+
 function toggleVisionKeyVisibility(){
   let inp = $('visionApiKey');
   inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
 function handleImageUpload(input){
-  if(input.files && input.files[0]){
-    handleImageFile(input.files[0]);
+  if(input.files && input.files.length>0){
+    for(let f of input.files){ handleImageFile(f); }
   }
 }
 
 function handleImageFile(file){
   if(file.size > 4*1024*1024){
-    setStatus('图片过大，请压缩到 4MB 以下');
+    setStatus(file.name + ' 过大，请压缩到 4MB 以下');
     return;
   }
   let reader = new FileReader();
   reader.onload = function(e){
-    _visionImageBase64 = e.target.result;
-    $('previewImg').src = _visionImageBase64;
-    $('imageInfo').textContent = file.name;
-    $('imageSize').textContent = (file.size/1024).toFixed(1) + ' KB · ' + (file.type || 'image');
-    $('imagePreview').style.display = 'block';
-    setStatus('图片已加载，点击「开始反推」');
+    _visionImages.push(e.target.result);
+    renderImagePreview();
+    setStatus('已加载 ' + _visionImages.length + ' 张图片，点击开始分析');
   };
   reader.readAsDataURL(file);
 }
 
+function renderImagePreview(){
+  let grid = $('imagePreviewGrid');
+  let countEl = $('imageCount');
+  grid.innerHTML = '';
+  _visionImages.forEach((img, idx)=>{
+    let item = document.createElement('div');
+    item.style.cssText = 'position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:2px solid var(--border);flex-shrink:0';
+    item.innerHTML = '<img src="'+img+'" style="width:100%;height:100%;object-fit:cover">' +
+      '<button onclick="removeImage('+idx+')" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.7);color:#fff;border:none;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center">x</button>' +
+      '<span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;padding:1px 5px;border-radius:3px">'+(idx+1)+'</span>';
+    grid.appendChild(item);
+  });
+  countEl.textContent = '共 ' + _visionImages.length + ' 张图片';
+  $('imagePreview').style.display = _visionImages.length > 0 ? 'block' : 'none';
+  if(_visionImages.length > 1){ $('visionMode').value = 'batch'; }
+  else if(_visionImages.length === 1){ $('visionMode').value = 'single'; }
+}
+
+function removeImage(idx){
+  _visionImages.splice(idx, 1);
+  renderImagePreview();
+  setStatus('已移除图片');
+}
+
 function clearImage(){
-  _visionImageBase64 = '';
+  _visionImages = [];
   $('imageFileInput').value = '';
   $('imagePreview').style.display = 'none';
+  $('imagePreviewGrid').innerHTML = '';
   $('visionResult').style.display = 'none';
   $('visionStatus').style.display = 'none';
-  setStatus('已清除图片');
+  $('corePromptBox').textContent = '';
+  $('visionOutput').value = '';
+  setStatus('已清除所有图片');
 }
 
 function startVisionTimer(){
@@ -2840,23 +2919,40 @@ function startVisionTimer(){
 }
 function stopVisionTimer(){
   if(_visionTimerInterval){ clearInterval(_visionTimerInterval); _visionTimerInterval = null; }
+  let timerEl = $('visionTimer');
+  if(timerEl) timerEl.style.display = 'none';
+}
+
+function extractCorePrompt(text){
+  let match = text.match(/【核心提示词】\s*([\s\S]*?)(?:【|$)/);
+  if(match && match[1]){
+    return match[1].trim().replace(/\n/g, ' ');
+  }
+  let lines = text.split('\n').filter(l=>l.trim());
+  if(lines.length > 0){
+    let first = lines[0].replace(/^【.*?】/, '').trim();
+    if(first.length > 10) return first;
+  }
+  return text.substring(0, 150);
 }
 
 async function reversePrompt(){
-  if(!_visionImageBase64){ setStatus('请先上传图片'); return; }
+  if(_visionImages.length === 0){ setStatus('请先上传图片'); return; }
 
+  let provider = $('visionProvider').value;
+  let cfg = VISION_API_CONFIGS[provider];
   let apiKey = $('visionApiKey').value.trim() || localStorage.getItem('vision_api_key');
+
   if(!apiKey){
-    apiKey = localStorage.getItem('deepseek_api_key') || '';
-    if(!apiKey){
-      setStatus('请先输入智谱 API Key 或 DeepSeek API Key');
-      $('visionApiKey').focus();
-      return;
-    }
+    setStatus('请先输入 API Key');
+    $('visionApiKey').focus();
+    return;
   }
   localStorage.setItem('vision_api_key', apiKey);
 
-  let model = $('visionModel').value;
+  let mode = $('visionMode').value;
+  let isBatch = mode === 'batch' && _visionImages.length > 1;
+  let systemPrompt = isBatch ? BATCH_ANALYSIS_PROMPT : SINGLE_ANALYSIS_PROMPT;
   let btn = $('reverseBtn');
 
   btn.disabled = true;
@@ -2864,106 +2960,147 @@ async function reversePrompt(){
   $('visionStatus').style.display = 'block';
   $('visionResult').style.display = 'none';
   $('visionSpinner').style.display = 'block';
-  $('visionStatusText').textContent = 'AI 正在分析图片内容...';
+  $('visionStatusText').textContent = isBatch
+    ? 'AI 正在分析 ' + _visionImages.length + ' 张图片序列...'
+    : 'AI 正在分析图片内容...';
   $('visionStatus').querySelector('div').classList.remove('ai-success','ai-error');
   startVisionTimer();
 
-  // 构建系统提示词
-  let systemPrompt = '你是 Seedance 2.0 视频提示词专家。用户上传一张图片，你需要分析图片内容并反推出一段专业的视频提示词。输出格式极其重要：必须是一段连续流畅的叙事段落，像电影导演口述画面一样，所有要素用逗号和句号连接，绝不要使用 markdown 标题、分点、分行、序号列表或粗体字。';
-
-  let userPrompt = '分析这张图片，反推出一段详细的 Seedance 2.0 视频提示词。';
-  userPrompt += '\n\n要求（极其重要，必须严格遵守）：\n1. 详细描述图片中的主体（人物、物体、动物等）的外貌、服装、姿态\n2. 描述场景环境（地点、天气、时间、背景元素）\n3. 分析光线方向、色温、明暗对比\n4. 推荐合适的镜头语言（景别、运镜方式、角度）\n5. 推荐色调和质感风格\n6. 输出一段连续流畅的叙事段落，所有内容融合在一个自然段落中\n7. 绝对不要使用 markdown 格式（如**粗体**、##标题、- 列表）\n8. 绝对不要分点、分行、分时间段\n9. 末尾加上"禁止任何文字、字幕、LOGO或水印"\n10. 直接输出提示词文本，不要加任何标题或说明';
-
   try {
-    // 智谱 API 兼容 OpenAI 格式
-    let apiBase = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-    let useModel = model;
+    let promptText;
 
-    // 如果用 DeepSeek Key，走 DeepSeek 接口（但不支持图片，会报错提示）
-    let isDeepSeekKey = apiKey.startsWith('sk-') && !apiKey.startsWith('glm-');
-    if(isDeepSeekKey){
-      // DeepSeek 不支持图片，但仍尝试调用
-      apiBase = 'https://api.deepseek.com/chat/completions';
-      useModel = 'deepseek-v4-pro';
+    if(provider === 'gemini'){
+      let parts = [{ text: systemPrompt + '\n\n请分析以下' + (isBatch ? _visionImages.length + '张图片序列' : '图片') + '：' }];
+      _visionImages.forEach(img=>{
+        let base64Data = img.split(',')[1];
+        let mimeType = img.split(';')[0].split(':')[1];
+        parts.push({ inline_data: { mime_type: mimeType, data: base64Data } });
+      });
+
+      let geminiUrl = cfg.url + '?key=' + apiKey;
+      let response = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: parts }],
+          generationConfig: { maxOutputTokens: cfg.maxTokens, temperature: 0.7 }
+        })
+      });
+
+      if(!response.ok){
+        let errData = await response.json().catch(() => ({}));
+        let errMsg = errData.error ? (errData.error.message || JSON.stringify(errData.error)) : ('HTTP ' + response.status);
+        if(response.status === 400 && errMsg.includes('API key')) errMsg = 'Gemini API Key 无效，请检查';
+        if(response.status === 429) errMsg = '请求过于频繁，请稍后再试';
+        throw new Error(errMsg);
+      }
+
+      let data = await response.json();
+      promptText = data.candidates[0].content.parts[0].text.trim();
+
+    } else {
+      let userContent = [{ type: 'text', text: '请分析以下' + (isBatch ? _visionImages.length + '张图片序列' : '图片') + '：' }];
+      _visionImages.forEach(img=>{
+        userContent.push({ type: 'image_url', image_url: { url: img } });
+      });
+
+      let response = await fetch(cfg.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey
+        },
+        body: JSON.stringify({
+          model: cfg.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent }
+          ],
+          max_tokens: cfg.maxTokens,
+          temperature: 0.7
+        })
+      });
+
+      if(!response.ok){
+        let errData = await response.json().catch(() => ({}));
+        let errMsg = errData.error ? (errData.error.message || errData.error) : ('HTTP ' + response.status);
+        if(response.status === 401) errMsg = 'API Key 无效，请检查后重新输入';
+        if(response.status === 429) errMsg = '请求过于频繁，请稍后再试';
+        if(response.status === 400){
+          if(provider === 'zhipu') errMsg = errMsg + '（智谱GLM-4V-Plus模型，请确认Key有视觉模型权限）';
+          if(provider === 'openrouter') errMsg = errMsg + '（OpenRouter，请确认账户有余额）';
+        }
+        throw new Error(errMsg);
+      }
+
+      let data = await response.json();
+      promptText = data.choices[0].message.content.trim();
     }
 
-    let response = await fetch(apiBase, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
-      body: JSON.stringify({
-        model: useModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: [
-            { type: 'text', text: userPrompt },
-            { type: 'image_url', image_url: { url: _visionImageBase64 } }
-          ]}
-        ],
-        max_tokens: useModel === 'glm-4v-flash' ? 1024 : 2000,
-        temperature: 0.7
-      })
-    });
+    let corePrompt = extractCorePrompt(promptText);
 
-    if(!response.ok){
-      let errData = await response.json().catch(() => ({}));
-      let errMsg = errData.error ? (errData.error.message || errData.error) : ('HTTP ' + response.status);
-      if(response.status === 401) errMsg = 'API Key 无效，请检查后重新输入';
-      if(response.status === 429) errMsg = '请求过于频繁，请稍后再试';
-      if(response.status === 400 && isDeepSeekKey) errMsg = 'DeepSeek API 不支持图片识别，请使用智谱 API Key（免费注册：bigmodel.cn）';
-      throw new Error(errMsg);
-    }
-
-    let data = await response.json();
-    let promptText = data.choices[0].message.content.trim();
-
+    $('corePromptBox').textContent = corePrompt;
     $('visionOutput').value = promptText;
     $('visionSpinner').style.display = 'none';
-    $('visionStatusText').textContent = '✅ 图片反推完成！';
+    $('visionStatusText').textContent = '✅ 分析完成！核心提示词已提取';
     $('visionStatus').querySelector('div').classList.add('ai-success');
     $('visionResult').style.display = 'block';
     stopVisionTimer();
-    setStatus('图片反推完成');
+    setStatus('图片分析完成，核心提示词已提取');
 
   } catch(err) {
     $('visionSpinner').style.display = 'none';
     $('visionStatusText').textContent = '❌ ' + err.message;
     $('visionStatus').querySelector('div').classList.add('ai-error');
     stopVisionTimer();
-    setStatus('图片反推失败: ' + err.message);
+    setStatus('分析失败: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '🔍 开始反推';
+    btn.textContent = '🔍 开始分析';
   }
+}
+
+function copyCorePrompt(){
+  let text = $('corePromptBox').textContent;
+  if(!text){ setStatus('没有可复制的核心提示词'); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    setStatus('✅ 核心提示词已复制到剪贴板');
+  }).catch(() => {
+    let ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    setStatus('✅ 核心提示词已复制');
+  });
 }
 
 function copyVisionResult(){
   let text = $('visionOutput').value;
   if(!text){ setStatus('没有可复制的内容'); return; }
   navigator.clipboard.writeText(text).then(() => {
-    setStatus('✅ 提示词已复制到剪贴板');
+    setStatus('✅ 完整报告已复制到剪贴板');
   }).catch(() => {
     $('visionOutput').select();
     document.execCommand('copy');
-    setStatus('✅ 提示词已复制');
+    setStatus('✅ 完整报告已复制');
   });
 }
 
-function sendVisionToResult(){
-  let text = $('visionOutput').value;
-  if(!text){ setStatus('没有可发送的内容'); return; }
+function sendCoreToResult(){
+  let text = $('corePromptBox').textContent;
+  if(!text){ setStatus('没有可发送的核心提示词'); return; }
   if($('resultText')) $('resultText').value = text;
-  setStatus('✅ 已发送到生成结果');
+  setStatus('✅ 核心提示词已发送到生成结果');
   switchTab('result');
 }
 
-function sendVisionToAI(){
-  let text = $('visionOutput').value;
-  if(!text){ setStatus('没有可发送的内容'); return; }
+function sendCoreToAI(){
+  let text = $('corePromptBox').textContent;
+  if(!text){ setStatus('没有可发送的核心提示词'); return; }
   if($('aiInput')) $('aiInput').value = text;
-  setStatus('✅ 已发送到 AI 优化，可继续优化');
+  setStatus('✅ 核心提示词已发送到 AI 优化');
   switchTab('ai');
 }
 
@@ -2971,6 +3108,21 @@ function sendVisionToAI(){
    更新日志模块
    ============================================================ */
 const changelogData = [
+  {
+    version: "v2.8",
+    date: "2026-07-09",
+    title: "PromptLens 图片反推重构",
+    type: "major",
+    items: [
+      "图片反推功能全面重构，采用 PromptLens 6维度分析架构（主体/场景/镜头/光影/风格/氛围）",
+      "支持多图片上传，可进行单图深度分析或多图序列批量分析",
+      "支持三种视觉模型API：智谱GLM-4V-Plus / Google Gemini / OpenRouter",
+      "新增核心提示词自动提取功能，从完整分析报告中提取精炼可用提示词",
+      "分析结果分为核心提示词（可直接复制使用）和完整分析报告两部分",
+      "图片预览网格，支持单张删除和批量管理",
+      "核心提示词可一键复制、发送到生成结果、发送到AI优化"
+    ]
+  },
   {
     version: "v2.7",
     date: "2026-07-09",
