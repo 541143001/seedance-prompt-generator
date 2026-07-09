@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seedance 2.0 提示词生成器 v2.6</title>
+<title>Seedance 2.0 提示词生成器 v2.7</title>
 <style>
 :root{
   --primary:#6366F1;--primary-dark:#4F46E5;--primary-light:#818CF8;
@@ -164,7 +164,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
 <div class="header">
   <h1>🎬 Seedance 2.0 提示词生成器</h1>
-  <span class="ver">v2.6</span>
+  <span class="ver">v2.7</span>
   <div class="spacer"></div>
   <span class="badge">🤖 DeepSeek AI 驱动</span>
 </div>
@@ -172,6 +172,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 <div class="main">
   <div class="nav" id="nav">
     <div class="nav-item active" data-tab="ai"><span class="icon">🤖</span>AI 生成</div>
+    <div class="nav-item" data-tab="image2prompt"><span class="icon">🖼️</span>图片反推</div>
     <div class="nav-item" data-tab="basic"><span class="icon">🎬</span>基本设置</div>
     <div class="nav-item" data-tab="script"><span class="icon">📝</span>剧本分析</div>
     <div class="nav-item" data-tab="timeline"><span class="icon">⏱️</span>时间轴分镜</div>
@@ -336,6 +337,110 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
           • 赛博朋克城市夜景，一个穿风衣的男人在雨中走过霓虹灯街道，15秒，横屏<br>
           • 一只橘猫趴在窗台上晒太阳，微风吹动窗帘，猫眯着眼伸了个懒腰，温馨治愈，5秒<br>
           • 产品广告：一款银色手表的特写展示，高端商务风格，旋转展示，10秒
+        </div>
+      </div>
+    </div>
+
+    <!-- 图片反推 -->
+    <div class="panel" id="panel-image2prompt">
+      <div class="hero-banner" style="background:linear-gradient(135deg,#0EA5E9 0%,#6366F1 100%)">
+        <h2>🖼️ 图片反推提示词</h2>
+        <p>上传一张图片，AI 自动识别画面内容并反推出一段专业的 Seedance 2.0 视频提示词。适用于参考图生视频、风格迁移等场景。</p>
+        <div class="hero-tags">
+          <span class="hero-tag">🎨 画面分析</span>
+          <span class="hero-tag">📊 风格识别</span>
+          <span class="hero-tag">💡 光线推断</span>
+          <span class="hero-tag">🎬 镜头建议</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="ti">🔑</span>API 设置</div>
+        <div class="card-desc">图片反推使用智谱 GLM-4V 视觉模型，<a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="color:var(--primary)">点此免费获取 API Key</a>（GLM-4V-Flash 模型免费）</div>
+        <div class="field" style="margin-bottom:8px">
+          <input type="password" id="visionApiKey" placeholder="输入智谱 API Key（或使用已保存的 DeepSeek Key）" style="flex:1">
+          <button class="btn btn-sm btn-ghost" onclick="toggleVisionKeyVisibility()">👁️ 显示</button>
+          <button class="btn btn-sm btn-secondary" onclick="saveVisionKey()">💾 保存</button>
+        </div>
+        <div class="hint" id="visionKeyHint" style="margin-bottom:8px">
+          API Key 保存在浏览器本地，不会上传。推荐使用智谱 API Key（免费额度大），也支持 DeepSeek API Key。
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="ti">📤</span>上传图片</div>
+        <div class="card-desc">支持 JPG、PNG、WebP、GIF 格式，建议图片小于 4MB</div>
+        <div id="uploadZone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg-light)" onclick="$('imageFileInput').click()" onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--hover)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-light)'">
+          <div style="font-size:36px;margin-bottom:8px">📎</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">点击上传或拖拽图片到此处</div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:4px">JPG / PNG / WebP / GIF · 最大 4MB</div>
+        </div>
+        <input type="file" id="imageFileInput" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+        <div id="imagePreview" style="display:none;margin-top:14px">
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <img id="previewImg" style="max-width:200px;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border);object-fit:cover">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;margin-bottom:4px" id="imageInfo"></div>
+              <div style="font-size:12px;color:var(--text-light);margin-bottom:8px" id="imageSize"></div>
+              <button class="btn btn-sm btn-ghost" onclick="clearImage()">🗑️ 移除图片</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="ti">⚙️</span>反推设置</div>
+        <div class="form-row" style="gap:8px;margin-bottom:10px">
+          <select id="visionModel" style="flex:1">
+            <option value="glm-4v-flash">GLM-4V-Flash（免费·推荐）</option>
+            <option value="glm-4v">GLM-4V（更精准·收费）</option>
+          </select>
+          <select id="visionStyle" style="flex:1">
+            <option value="">输出风格</option>
+            <option value="cinematic">电影级（详细镜头+灯光）</option>
+            <option value="product">产品展示（材质+光影+旋转）</option>
+            <option value="character">角色特写（外貌+表情+服装）</option>
+            <option value="landscape">风景氛围（环境+色调+氛围）</option>
+            <option value="simple">简洁版（核心要素概要）</option>
+          </select>
+        </div>
+        <div class="form-row" style="gap:8px;margin-bottom:10px">
+          <select id="visionRatio" style="flex:1">
+            <option value="">画幅比例</option>
+            <option value="16:9">16:9 横屏</option>
+            <option value="9:16">9:16 竖屏</option>
+            <option value="1:1">1:1 方形</option>
+          </select>
+          <select id="visionDuration" style="flex:1">
+            <option value="">时长</option>
+            <option value="5">5 秒</option>
+            <option value="10">10 秒</option>
+            <option value="15">15 秒</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="reversePrompt()" id="reverseBtn">🔍 开始反推</button>
+          <button class="btn btn-ghost" onclick="clearImage()">🗑️ 清除</button>
+        </div>
+      </div>
+
+      <div id="visionStatus" style="display:none;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg-light);border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div class="ai-spinner" id="visionSpinner"></div>
+          <span id="visionStatusText" style="font-size:13px;color:var(--text-light)">AI 正在分析图片...</span>
+          <span id="visionTimer" style="margin-left:auto;font-size:12px;color:var(--text-light);font-variant-numeric:tabular-nums"></span>
+        </div>
+      </div>
+
+      <div id="visionResult" style="display:none">
+        <div class="card">
+          <div class="card-title"><span class="ti">📋</span>反推结果</div>
+          <textarea id="visionOutput" rows="12" style="font-size:13px;line-height:1.8;min-height:200px;background:var(--bg-light);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;resize:vertical"></textarea>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn btn-success" onclick="copyVisionResult()">📋 复制提示词</button>
+            <button class="btn btn-secondary" onclick="sendVisionToResult()">📤 发送到生成结果</button>
+            <button class="btn btn-ghost" onclick="sendVisionToAI()">🤖 发送到 AI 优化</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2663,12 +2768,261 @@ function initAISettings(){
   if(savedModel){
     $('aiModel').value = savedModel;
   }
+  // 初始化图片反推设置
+  initVisionSettings();
+}
+
+/* ============================================================
+   图片反推提示词 - GLM-4V 视觉模型
+   ============================================================ */
+let _visionImageBase64 = '';
+let _visionTimerInterval = null;
+
+function initVisionSettings(){
+  let savedKey = localStorage.getItem('vision_api_key');
+  if(savedKey){
+    $('visionApiKey').value = savedKey;
+    $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ 智谱 API Key 已加载</span> · <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+  }
+  let savedModel = localStorage.getItem('vision_model');
+  if(savedModel){
+    $('visionModel').value = savedModel;
+  }
+  // 拖拽上传
+  let zone = $('uploadZone');
+  if(zone){
+    zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.style.borderColor='var(--primary)'; zone.style.background='var(--hover)'; });
+    zone.addEventListener('dragleave', e=>{ zone.style.borderColor='var(--border)'; zone.style.background='var(--bg-light)'; });
+    zone.addEventListener('drop', e=>{
+      e.preventDefault();
+      zone.style.borderColor='var(--border)'; zone.style.background='var(--bg-light)';
+      if(e.dataTransfer.files.length>0){
+        let file = e.dataTransfer.files[0];
+        if(file.type.startsWith('image/')){ handleImageFile(file); }
+      }
+    });
+  }
+}
+
+function saveVisionKey(){
+  let key = $('visionApiKey').value.trim();
+  if(!key){ setStatus('请输入 API Key'); return; }
+  localStorage.setItem('vision_api_key', key);
+  $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已保存</span> · <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+  setStatus('API Key 已保存');
+}
+function toggleVisionKeyVisibility(){
+  let inp = $('visionApiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function handleImageUpload(input){
+  if(input.files && input.files[0]){
+    handleImageFile(input.files[0]);
+  }
+}
+
+function handleImageFile(file){
+  if(file.size > 4*1024*1024){
+    setStatus('图片过大，请压缩到 4MB 以下');
+    return;
+  }
+  let reader = new FileReader();
+  reader.onload = function(e){
+    _visionImageBase64 = e.target.result;
+    $('previewImg').src = _visionImageBase64;
+    $('imageInfo').textContent = file.name;
+    $('imageSize').textContent = (file.size/1024).toFixed(1) + ' KB · ' + (file.type || 'image');
+    $('imagePreview').style.display = 'block';
+    setStatus('图片已加载，点击「开始反推」');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage(){
+  _visionImageBase64 = '';
+  $('imageFileInput').value = '';
+  $('imagePreview').style.display = 'none';
+  $('visionResult').style.display = 'none';
+  $('visionStatus').style.display = 'none';
+  setStatus('已清除图片');
+}
+
+function startVisionTimer(){
+  let seconds = 0;
+  if(_visionTimerInterval) clearInterval(_visionTimerInterval);
+  let timerEl = $('visionTimer');
+  if(timerEl) timerEl.style.display = 'block';
+  _visionTimerInterval = setInterval(()=>{
+    seconds++;
+    let m = Math.floor(seconds/60);
+    let s = String(seconds%60).padStart(2,'0');
+    if(timerEl) timerEl.textContent = m + ':' + s;
+  }, 1000);
+}
+function stopVisionTimer(){
+  if(_visionTimerInterval){ clearInterval(_visionTimerInterval); _visionTimerInterval = null; }
+}
+
+async function reversePrompt(){
+  if(!_visionImageBase64){ setStatus('请先上传图片'); return; }
+
+  let apiKey = $('visionApiKey').value.trim() || localStorage.getItem('vision_api_key');
+  if(!apiKey){
+    apiKey = localStorage.getItem('deepseek_api_key') || '';
+    if(!apiKey){
+      setStatus('请先输入智谱 API Key 或 DeepSeek API Key');
+      $('visionApiKey').focus();
+      return;
+    }
+  }
+  localStorage.setItem('vision_api_key', apiKey);
+
+  let model = $('visionModel').value;
+  let style = $('visionStyle').value;
+  let ratio = $('visionRatio').value;
+  let duration = $('visionDuration').value;
+  let btn = $('reverseBtn');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+  $('visionStatus').style.display = 'block';
+  $('visionResult').style.display = 'none';
+  $('visionSpinner').style.display = 'block';
+  $('visionStatusText').textContent = 'AI 正在分析图片内容...';
+  $('visionStatus').querySelector('div').classList.remove('ai-success','ai-error');
+  startVisionTimer();
+
+  // 构建系统提示词
+  let systemPrompt = '你是 Seedance 2.0 视频提示词专家。用户上传一张图片，你需要分析图片内容并反推出一段专业的视频提示词。';
+  let styleHint = '';
+  if(style === 'cinematic') styleHint = '输出电影级风格，包含详细的镜头语言（景别、运镜、角度）、灯光描述（光源方向、色温、光比）、色调和质感细节';
+  else if(style === 'product') styleHint = '输出产品展示风格，聚焦产品材质、光影反射、旋转展示方式、微距特写';
+  else if(style === 'character') styleHint = '输出角色特写风格，详细描述角色外貌、表情、服装、姿态、发型等细节';
+  else if(style === 'landscape') styleHint = '输出风景氛围风格，描述环境、天气、色调、氛围感、自然光线';
+  else if(style === 'simple') styleHint = '输出简洁版，只保留核心要素（主体+场景+风格+光线），控制在50字以内';
+
+  let videoParams = '';
+  if(ratio) videoParams += ratio + ' 画幅，';
+  if(duration) videoParams += duration + ' 秒，';
+
+  let userPrompt = '分析这张图片，反推出一段详细的 Seedance 2.0 视频提示词。';
+  if(videoParams) userPrompt += '视频参数：' + videoParams + '。';
+  if(styleHint) userPrompt += styleHint + '。';
+  userPrompt += '\n\n要求：\n1. 详细描述图片中的主体（人物、物体、动物等）的外貌、服装、姿态\n2. 描述场景环境（地点、天气、时间、背景元素）\n3. 分析光线方向、色温、明暗对比\n4. 推荐合适的镜头语言（景别、运镜方式、角度）\n5. 推荐色调和质感风格\n6. 输出一段连续流畅的叙事段落，不要分点、分行、分时间段\n7. 末尾加上"禁止任何文字、字幕、LOGO或水印"\n8. 直接输出提示词文本，不要加标题或说明';
+
+  try {
+    // 智谱 API 兼容 OpenAI 格式
+    let apiBase = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    let useModel = model;
+
+    // 如果用 DeepSeek Key，走 DeepSeek 接口（但不支持图片，会报错提示）
+    let isDeepSeekKey = apiKey.startsWith('sk-') && !apiKey.startsWith('glm-');
+    if(isDeepSeekKey){
+      // DeepSeek 不支持图片，但仍尝试调用
+      apiBase = 'https://api.deepseek.com/chat/completions';
+      useModel = 'deepseek-v4-pro';
+    }
+
+    let response = await fetch(apiBase, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: useModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: [
+            { type: 'text', text: userPrompt },
+            { type: 'image_url', image_url: { url: _visionImageBase64 } }
+          ]}
+        ],
+        max_tokens: 2000,
+        temperature: 0.7
+      })
+    });
+
+    if(!response.ok){
+      let errData = await response.json().catch(() => ({}));
+      let errMsg = errData.error ? (errData.error.message || errData.error) : ('HTTP ' + response.status);
+      if(response.status === 401) errMsg = 'API Key 无效，请检查后重新输入';
+      if(response.status === 429) errMsg = '请求过于频繁，请稍后再试';
+      if(response.status === 400 && isDeepSeekKey) errMsg = 'DeepSeek API 不支持图片识别，请使用智谱 API Key（免费注册：open.bigmodel.cn）';
+      throw new Error(errMsg);
+    }
+
+    let data = await response.json();
+    let promptText = data.choices[0].message.content.trim();
+
+    $('visionOutput').value = promptText;
+    $('visionSpinner').style.display = 'none';
+    $('visionStatusText').textContent = '✅ 图片反推完成！';
+    $('visionStatus').querySelector('div').classList.add('ai-success');
+    $('visionResult').style.display = 'block';
+    stopVisionTimer();
+    setStatus('图片反推完成');
+
+  } catch(err) {
+    $('visionSpinner').style.display = 'none';
+    $('visionStatusText').textContent = '❌ ' + err.message;
+    $('visionStatus').querySelector('div').classList.add('ai-error');
+    stopVisionTimer();
+    setStatus('图片反推失败: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 开始反推';
+  }
+}
+
+function copyVisionResult(){
+  let text = $('visionOutput').value;
+  if(!text){ setStatus('没有可复制的内容'); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    setStatus('✅ 提示词已复制到剪贴板');
+  }).catch(() => {
+    $('visionOutput').select();
+    document.execCommand('copy');
+    setStatus('✅ 提示词已复制');
+  });
+}
+
+function sendVisionToResult(){
+  let text = $('visionOutput').value;
+  if(!text){ setStatus('没有可发送的内容'); return; }
+  if($('resultText')) $('resultText').value = text;
+  setStatus('✅ 已发送到生成结果');
+  switchTab('result');
+}
+
+function sendVisionToAI(){
+  let text = $('visionOutput').value;
+  if(!text){ setStatus('没有可发送的内容'); return; }
+  if($('aiInput')) $('aiInput').value = text;
+  setStatus('✅ 已发送到 AI 优化，可继续优化');
+  switchTab('ai');
 }
 
 /* ============================================================
    更新日志模块
    ============================================================ */
 const changelogData = [
+  {
+    version: "v2.7",
+    date: "2026-07-09",
+    title: "图片反推提示词功能",
+    type: "major",
+    items: [
+      "新增图片反推功能，上传图片自动识别画面并生成视频提示词",
+      "使用智谱 GLM-4V 视觉模型（GLM-4V-Flash 免费），兼容 OpenAI 格式",
+      "支持点击上传和拖拽上传，图片预览和文件信息显示",
+      "5种输出风格：电影级/产品展示/角色特写/风景氛围/简洁版",
+      "支持画幅和时长参数设置",
+      "反推结果可复制、发送到生成结果、发送到AI优化继续增强",
+      "独立 API Key 保存（智谱），也兼容 DeepSeek Key 提示"
+    ]
+  },
   {
     version: "v2.6",
     date: "2026-07-09",
