@@ -395,28 +395,6 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
             <option value="glm-4v-flash">GLM-4V-Flash（免费·推荐）</option>
             <option value="glm-4v">GLM-4V（更精准·收费）</option>
           </select>
-          <select id="visionStyle" style="flex:1">
-            <option value="">输出风格</option>
-            <option value="cinematic">电影级（详细镜头+灯光）</option>
-            <option value="product">产品展示（材质+光影+旋转）</option>
-            <option value="character">角色特写（外貌+表情+服装）</option>
-            <option value="landscape">风景氛围（环境+色调+氛围）</option>
-            <option value="simple">简洁版（核心要素概要）</option>
-          </select>
-        </div>
-        <div class="form-row" style="gap:8px;margin-bottom:10px">
-          <select id="visionRatio" style="flex:1">
-            <option value="">画幅比例</option>
-            <option value="16:9">16:9 横屏</option>
-            <option value="9:16">9:16 竖屏</option>
-            <option value="1:1">1:1 方形</option>
-          </select>
-          <select id="visionDuration" style="flex:1">
-            <option value="">时长</option>
-            <option value="5">5 秒</option>
-            <option value="10">10 秒</option>
-            <option value="15">15 秒</option>
-          </select>
         </div>
         <div class="btn-row">
           <button class="btn btn-primary" onclick="reversePrompt()" id="reverseBtn">🔍 开始反推</button>
@@ -2879,9 +2857,6 @@ async function reversePrompt(){
   localStorage.setItem('vision_api_key', apiKey);
 
   let model = $('visionModel').value;
-  let style = $('visionStyle').value;
-  let ratio = $('visionRatio').value;
-  let duration = $('visionDuration').value;
   let btn = $('reverseBtn');
 
   btn.disabled = true;
@@ -2895,20 +2870,8 @@ async function reversePrompt(){
 
   // 构建系统提示词
   let systemPrompt = '你是 Seedance 2.0 视频提示词专家。用户上传一张图片，你需要分析图片内容并反推出一段专业的视频提示词。输出格式极其重要：必须是一段连续流畅的叙事段落，像电影导演口述画面一样，所有要素用逗号和句号连接，绝不要使用 markdown 标题、分点、分行、序号列表或粗体字。';
-  let styleHint = '';
-  if(style === 'cinematic') styleHint = '输出电影级风格，包含详细的镜头语言（景别、运镜、角度）、灯光描述（光源方向、色温、光比）、色调和质感细节';
-  else if(style === 'product') styleHint = '输出产品展示风格，聚焦产品材质、光影反射、旋转展示方式、微距特写';
-  else if(style === 'character') styleHint = '输出角色特写风格，详细描述角色外貌、表情、服装、姿态、发型等细节';
-  else if(style === 'landscape') styleHint = '输出风景氛围风格，描述环境、天气、色调、氛围感、自然光线';
-  else if(style === 'simple') styleHint = '输出简洁版，只保留核心要素（主体+场景+风格+光线），控制在80字以内';
-
-  let videoParams = '';
-  if(ratio) videoParams += ratio + ' 画幅，';
-  if(duration) videoParams += duration + ' 秒，';
 
   let userPrompt = '分析这张图片，反推出一段详细的 Seedance 2.0 视频提示词。';
-  if(videoParams) userPrompt += '视频参数：' + videoParams + '。';
-  if(styleHint) userPrompt += styleHint + '。';
   userPrompt += '\n\n要求（极其重要，必须严格遵守）：\n1. 详细描述图片中的主体（人物、物体、动物等）的外貌、服装、姿态\n2. 描述场景环境（地点、天气、时间、背景元素）\n3. 分析光线方向、色温、明暗对比\n4. 推荐合适的镜头语言（景别、运镜方式、角度）\n5. 推荐色调和质感风格\n6. 输出一段连续流畅的叙事段落，所有内容融合在一个自然段落中\n7. 绝对不要使用 markdown 格式（如**粗体**、##标题、- 列表）\n8. 绝对不要分点、分行、分时间段\n9. 末尾加上"禁止任何文字、字幕、LOGO或水印"\n10. 直接输出提示词文本，不要加任何标题或说明';
 
   try {
