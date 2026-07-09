@@ -356,7 +356,7 @@ input[type=radio],input[type=checkbox]{width:16px;height:16px;accent-color:var(-
 
       <div class="card">
         <div class="card-title"><span class="ti">🔑</span>API 设置</div>
-        <div class="card-desc">图片反推使用智谱 GLM-4V 视觉模型，<a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="color:var(--primary)">点此免费获取 API Key</a>（GLM-4V-Flash 模型免费）</div>
+        <div class="card-desc">图片反推使用智谱 GLM-4V 视觉模型，<a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">点此免费获取 API Key</a>（GLM-4V-Flash 模型免费）</div>
         <div class="field" style="margin-bottom:8px">
           <input type="password" id="visionApiKey" placeholder="输入智谱 API Key（或使用已保存的 DeepSeek Key）" style="flex:1">
           <button class="btn btn-sm btn-ghost" onclick="toggleVisionKeyVisibility()">👁️ 显示</button>
@@ -2782,7 +2782,7 @@ function initVisionSettings(){
   let savedKey = localStorage.getItem('vision_api_key');
   if(savedKey){
     $('visionApiKey').value = savedKey;
-    $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ 智谱 API Key 已加载</span> · <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+    $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ 智谱 API Key 已加载</span> · <a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
   }
   let savedModel = localStorage.getItem('vision_model');
   if(savedModel){
@@ -2808,7 +2808,7 @@ function saveVisionKey(){
   let key = $('visionApiKey').value.trim();
   if(!key){ setStatus('请输入 API Key'); return; }
   localStorage.setItem('vision_api_key', key);
-  $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已保存</span> · <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
+  $('visionKeyHint').innerHTML = '<span style="color:var(--success)">✅ API Key 已保存</span> · <a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" style="color:var(--primary)">获取 Key</a>';
   setStatus('API Key 已保存');
 }
 function toggleVisionKeyVisibility(){
@@ -2949,7 +2949,7 @@ async function reversePrompt(){
       let errMsg = errData.error ? (errData.error.message || errData.error) : ('HTTP ' + response.status);
       if(response.status === 401) errMsg = 'API Key 无效，请检查后重新输入';
       if(response.status === 429) errMsg = '请求过于频繁，请稍后再试';
-      if(response.status === 400 && isDeepSeekKey) errMsg = 'DeepSeek API 不支持图片识别，请使用智谱 API Key（免费注册：open.bigmodel.cn）';
+      if(response.status === 400 && isDeepSeekKey) errMsg = 'DeepSeek API 不支持图片识别，请使用智谱 API Key（免费注册：bigmodel.cn）';
       throw new Error(errMsg);
     }
 
